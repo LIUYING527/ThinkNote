@@ -5,1401 +5,1393 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>ThinkNote</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#7c3aed">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#4f46e5">
   <style>
     :root {
-      --bg:         #0d0b1a;
-      --bg-2:       #13101f;
-      --bg-3:       #1a1628;
-      --glass:      rgba(255,255,255,0.04);
-      --glass-h:    rgba(255,255,255,0.07);
-      --border:     rgba(139,92,246,0.18);
-      --border-h:   rgba(139,92,246,0.45);
-      --p1:         #7c3aed;
-      --p2:         #6d28d9;
-      --p-light:    #a78bfa;
-      --p-soft:     rgba(124,58,237,0.12);
-      --p-soft-h:   rgba(124,58,237,0.22);
-      --t1:         #f5f3ff;
-      --t2:         #c4b5fd;
-      --t3:         #a78bfa;
-      --tmuted:     #6b7280;
-      --ai-bg:      rgba(109,40,217,0.10);
-      --user-bg:    rgba(124,58,237,0.22);
-      --success:    #10b981;
-      --warning:    #f59e0b;
-      --info:       #3b82f6;
+      --bg:        #f0ede8;
+      --page:      #ffffff;
+      --sb-bg:     #f7f6f3;
+      --border:    #e5e1da;
+      --border-h:  #c9c4bc;
+      --accent:    #4f46e5;
+      --accent-l:  #818cf8;
+      --accent-s:  #eef2ff;
+      --t1: #111827; --t2: #374151; --t3: #6b7280; --t4: #9ca3af;
+      --sh-sm: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+      --sh:    0 4px 12px rgba(0,0,0,.09);
+      --thought: #5b5fcf; --thought-bg: #eef2ff; --thought-br: #c7d2fe;
+      --task:    #059669; --task-bg:    #ecfdf5; --task-br:    #a7f3d0;
+      --idea:    #d97706; --idea-bg:    #fffbeb; --idea-br:    #fde68a;
+      --plan:    #2563eb; --plan-bg:    #eff6ff; --plan-br:    #bfdbfe;
     }
-
     *{box-sizing:border-box;margin:0;padding:0;}
-
+    html,body{height:100%;overflow:hidden;}
     body{
-      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
-      background:var(--bg);
-      color:var(--t1);
-      height:100dvh;
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Helvetica Neue',sans-serif;
+      background:var(--bg);color:var(--t1);
+      display:flex;flex-direction:column;height:100dvh;
     }
 
-    /* ===== HEADER ===== */
+    /* ─── HEADER ─────────────────────────────────────── */
     .hdr{
-      display:flex;align-items:center;
-      padding:10px 16px;
-      background:var(--bg-2);
+      display:flex;align-items:center;height:52px;
+      padding:0 16px;gap:10px;
+      background:var(--page);
       border-bottom:1px solid var(--border);
-      flex-shrink:0;
-      gap:10px;
+      box-shadow:var(--sh-sm);
+      flex-shrink:0;z-index:20;
     }
-    .hdr-logo{
-      font-size:18px;font-weight:700;letter-spacing:-0.5px;
-      background:linear-gradient(135deg,#c4b5fd,#7c3aed);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-      background-clip:text;
+    .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .logo-svg{flex-shrink:0;}
+    .logo-name{
+      font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-.3px;
     }
-    .hdr-subtitle{font-size:12px;color:var(--tmuted);}
-    .hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
-    .sync-status{font-size:11px;color:var(--tmuted);padding:4px 10px;border-radius:20px;background:var(--glass);border:1px solid var(--border);}
-    .sync-status.ok{color:var(--success);}
-    .sync-status.syncing{color:var(--p-light);}
-
-    .ico-btn{
-      width:34px;height:34px;border-radius:9px;
-      border:1px solid var(--border);background:var(--glass);
-      color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;
-      font-size:15px;transition:all .2s;flex-shrink:0;
+    .logo-name span{color:var(--accent);}
+    .hdr-sep{width:1px;height:20px;background:var(--border);}
+    .type-filters{display:flex;gap:4px;overflow-x:auto;flex:1;}
+    .type-filter{
+      padding:4px 11px;border-radius:18px;
+      border:1px solid transparent;background:transparent;
+      color:var(--t3);font-size:12.5px;cursor:pointer;white-space:nowrap;
+      transition:all .15s;
     }
-    .ico-btn:hover{background:var(--p-soft-h);border-color:var(--p1);color:var(--p-light);}
-    .ico-btn.active{background:var(--p-soft-h);border-color:var(--p1);color:var(--p-light);}
-
-    /* ===== MAIN LAYOUT ===== */
-    .main{display:flex;flex:1;overflow:hidden;min-height:0;}
-
-    /* ===== LEFT PANE ===== */
-    .left{
-      width:360px;min-width:260px;flex-shrink:0;
-      display:flex;flex-direction:column;
-      border-right:1px solid var(--border);
-      background:var(--bg-2);
+    .type-filter:hover{color:var(--t2);background:var(--bg);}
+    .type-filter.active{background:var(--accent-s);border-color:var(--accent-l);color:var(--accent);font-weight:500;}
+    .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .sync-pill{
+      font-size:11px;padding:3px 9px;border-radius:10px;
+      background:var(--bg);border:1px solid var(--border);color:var(--t4);
     }
-
-    .left-top{
-      padding:14px 14px 10px;
-      border-bottom:1px solid var(--border);
-      flex-shrink:0;
-    }
-    .left-top-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-    .section-label{font-size:11px;color:var(--tmuted);text-transform:uppercase;letter-spacing:.6px;}
-    .note-count{margin-left:auto;font-size:11px;color:var(--tmuted);background:var(--glass);padding:2px 8px;border-radius:10px;}
-
-    .type-tabs{display:flex;gap:6px;flex-wrap:wrap;}
-    .type-tab{
-      padding:4px 10px;border-radius:16px;
-      border:1px solid var(--border);background:var(--glass);
-      color:var(--tmuted);font-size:12px;cursor:pointer;transition:all .15s;
-    }
-    .type-tab:hover{color:var(--t2);border-color:rgba(139,92,246,.35);}
-    .type-tab.active{background:var(--p-soft-h);border-color:var(--p1);color:var(--p-light);}
-
-    .notes-list{
-      flex:1;overflow-y:auto;
-      padding:10px;
-      display:flex;flex-direction:column;gap:7px;
-    }
-
-    .note-card{
-      padding:12px;border-radius:11px;
-      border:1px solid var(--border);background:var(--glass);
-      cursor:pointer;transition:all .18s;
-    }
-    .note-card:hover{border-color:rgba(139,92,246,.35);background:var(--glass-h);}
-    .note-card.active{border-color:var(--p1);background:var(--p-soft-h);box-shadow:0 0 0 1px var(--p1);}
-
-    .nc-top{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
-    .type-badge{
-      font-size:11px;padding:2px 7px;border-radius:9px;
-      background:var(--p-soft);color:var(--p-light);flex-shrink:0;
-    }
-    .type-badge.task{background:rgba(16,185,129,.12);color:#6ee7b7;}
-    .type-badge.idea{background:rgba(245,158,11,.12);color:#fcd34d;}
-    .type-badge.plan{background:rgba(59,130,246,.12);color:#93c5fd;}
-    .nc-time{font-size:10px;color:var(--tmuted);margin-left:auto;}
-    .nc-preview{font-size:13px;color:var(--t2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
-    .nc-footer{display:flex;align-items:center;margin-top:7px;gap:6px;}
-    .nc-thread-info{font-size:11px;color:var(--tmuted);}
-    .nc-del{
-      margin-left:auto;width:22px;height:22px;border-radius:6px;
-      border:none;background:transparent;color:var(--tmuted);cursor:pointer;
-      font-size:13px;display:flex;align-items:center;justify-content:center;
-      transition:all .15s;opacity:0;
-    }
-    .note-card:hover .nc-del{opacity:1;}
-    .nc-del:hover{background:rgba(239,68,68,.15);color:#f87171;}
-
-    .empty-notes{
-      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      color:var(--tmuted);gap:10px;padding:20px;text-align:center;
-    }
-    .empty-notes-icon{font-size:36px;opacity:.4;}
-    .empty-notes-text{font-size:13px;line-height:1.6;}
-
-    /* ===== COMPOSE AREA ===== */
-    .compose{
-      padding:12px;
-      border-top:1px solid var(--border);
-      background:var(--bg-3);
-      flex-shrink:0;
-    }
-    .compose-type-row{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;}
-    .compose-type{
-      padding:3px 9px;border-radius:14px;font-size:11px;
-      border:1px solid var(--border);background:var(--glass);color:var(--tmuted);
-      cursor:pointer;transition:all .15s;
-    }
-    .compose-type.active{background:var(--p-soft-h);border-color:var(--p1);color:var(--p-light);}
-
-    .compose-textarea{
-      width:100%;min-height:72px;max-height:140px;
-      padding:10px 12px;border-radius:10px;
-      border:1px solid var(--border);background:var(--glass);
-      color:var(--t1);font-size:13.5px;line-height:1.6;
-      resize:none;outline:none;font-family:inherit;
-      transition:border-color .2s;
-    }
-    .compose-textarea:focus{border-color:var(--p1);}
-    .compose-textarea::placeholder{color:var(--tmuted);}
-
-    .compose-bottom{display:flex;align-items:center;gap:8px;margin-top:8px;}
-    .compose-hint{font-size:11px;color:var(--tmuted);}
-    .send-btn{
-      margin-left:auto;padding:7px 18px;border-radius:9px;
-      border:none;background:linear-gradient(135deg,var(--p1),var(--p2));
-      color:#fff;font-size:13px;font-weight:500;cursor:pointer;
-      transition:all .2s;flex-shrink:0;
-    }
-    .send-btn:hover:not(:disabled){background:linear-gradient(135deg,#8b5cf6,var(--p1));transform:translateY(-1px);}
-    .send-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
-
-    /* ===== RIGHT PANE ===== */
-    .right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-
-    .right-empty{
-      flex:1;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      color:var(--tmuted);gap:12px;
-    }
-    .right-empty-icon{font-size:52px;opacity:.25;}
-    .right-empty-title{font-size:16px;font-weight:600;color:var(--t2);opacity:.5;}
-    .right-empty-sub{font-size:13px;text-align:center;line-height:1.6;}
-
-    .convo{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
-    .convo.visible{display:flex;}
-
-    .convo-hdr{
-      padding:14px 18px;
-      border-bottom:1px solid var(--border);
-      background:var(--bg-2);flex-shrink:0;
-    }
-    .convo-hdr-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-    .convo-type-badge{font-size:11px;padding:2px 8px;border-radius:9px;background:var(--p-soft);color:var(--p-light);}
-    .convo-type-badge.task{background:rgba(16,185,129,.12);color:#6ee7b7;}
-    .convo-type-badge.idea{background:rgba(245,158,11,.12);color:#fcd34d;}
-    .convo-type-badge.plan{background:rgba(59,130,246,.12);color:#93c5fd;}
-    .convo-time{font-size:11px;color:var(--tmuted);}
-    .convo-note-content{
-      font-size:14px;color:var(--t1);line-height:1.6;
-    }
-
-    .thread{
-      flex:1;overflow-y:auto;
-      padding:18px;
-      display:flex;flex-direction:column;gap:14px;
-    }
-
-    .msg{display:flex;flex-direction:column;max-width:84%;}
-    .msg.ai{align-self:flex-start;}
-    .msg.user{align-self:flex-end;}
-    .msg-meta{
-      font-size:10px;color:var(--tmuted);
-      margin-bottom:5px;display:flex;align-items:center;gap:6px;
-    }
-    .msg.user .msg-meta{justify-content:flex-end;}
-    .msg-avatar{
-      width:18px;height:18px;border-radius:5px;
+    .sync-pill.ok{color:#059669;border-color:#a7f3d0;background:#ecfdf5;}
+    .sync-pill.busy{color:var(--accent-l);}
+    .hbtn{
+      width:32px;height:32px;border-radius:8px;
+      border:1px solid var(--border);background:var(--page);
+      color:var(--t3);cursor:pointer;
       display:flex;align-items:center;justify-content:center;
-      font-size:11px;flex-shrink:0;
+      font-size:14px;transition:all .15s;
     }
-    .msg.ai .msg-avatar{background:var(--p-soft);color:var(--p-light);}
-    .msg.user .msg-avatar{background:var(--user-bg);color:var(--p-light);}
+    .hbtn:hover{background:var(--bg);border-color:var(--border-h);color:var(--t2);}
+    .hbtn.on{background:var(--accent-s);border-color:var(--accent-l);color:var(--accent);}
 
-    .msg-bubble{
-      padding:12px 15px;font-size:13.5px;line-height:1.75;
+    /* ─── MAIN SPLIT ──────────────────────────────────── */
+    .main{display:flex;flex:1;overflow:hidden;position:relative;}
+
+    /* Canvas overlay for connector lines */
+    #connCanvas{
+      position:absolute;top:0;left:0;
+      pointer-events:none;z-index:8;
+    }
+
+    /* ─── LEFT: DOCUMENT PANE ─────────────────────────── */
+    .doc-pane{
+      width:56%;min-width:280px;
+      display:flex;flex-direction:column;
+      background:var(--bg);
+    }
+    .doc-scroll{
+      flex:1;overflow-y:auto;
+      padding:14px 14px 0;
+      display:flex;flex-direction:column;gap:9px;
+    }
+
+    .note-entry{
+      background:var(--page);
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:14px 16px 12px 20px;
+      cursor:pointer;
+      transition:border-color .18s,box-shadow .18s;
+      position:relative;
+      box-shadow:var(--sh-sm);
+    }
+    .note-entry::before{
+      content:'';position:absolute;left:0;top:10px;bottom:10px;
+      width:3px;border-radius:3px;
+    }
+    .note-entry[data-type="thought"]::before{background:var(--thought);}
+    .note-entry[data-type="task"]::before   {background:var(--task);}
+    .note-entry[data-type="idea"]::before   {background:var(--idea);}
+    .note-entry[data-type="plan"]::before   {background:var(--plan);}
+    .note-entry:hover{border-color:var(--border-h);box-shadow:var(--sh);}
+    .note-entry.sel{border-color:var(--accent-l);box-shadow:0 0 0 2px rgba(99,102,241,.12),var(--sh);}
+
+    .ne-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+    .ne-badge{
+      font-size:11px;font-weight:500;padding:2px 7px;border-radius:8px;
+    }
+    .ne-badge.thought{background:var(--thought-bg);color:var(--thought);}
+    .ne-badge.task   {background:var(--task-bg);   color:var(--task);}
+    .ne-badge.idea   {background:var(--idea-bg);   color:var(--idea);}
+    .ne-badge.plan   {background:var(--plan-bg);   color:var(--plan);}
+    .ne-time{font-size:11px;color:var(--t4);margin-left:auto;}
+    .ne-content{
+      font-size:14px;color:var(--t2);line-height:1.7;
       white-space:pre-wrap;word-break:break-word;
     }
-    .msg.ai .msg-bubble{
-      background:var(--ai-bg);
-      border:1px solid rgba(139,92,246,.18);
-      border-radius:4px 14px 14px 14px;
-      color:var(--t1);
+    .ne-foot{display:flex;align-items:center;margin-top:8px;gap:6px;}
+    .ne-anno-pill{
+      font-size:11px;color:var(--t4);
+      display:flex;align-items:center;gap:3px;
     }
-    .msg.user .msg-bubble{
-      background:var(--user-bg);
-      border:1px solid rgba(139,92,246,.32);
-      border-radius:14px 4px 14px 14px;
-      color:var(--t1);
+    .ne-del{
+      margin-left:auto;padding:2px 6px;border-radius:6px;
+      border:none;background:transparent;color:var(--t4);
+      cursor:pointer;font-size:12px;opacity:0;transition:all .15s;
     }
+    .note-entry:hover .ne-del{opacity:1;}
+    .ne-del:hover{background:#fef2f2;color:#ef4444;}
 
-    .streaming-cursor::after{
-      content:'▋';animation:blink .65s infinite;
-      color:var(--p-light);font-size:.85em;vertical-align:middle;
+    .empty-doc{
+      flex:1;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      padding:40px 24px;text-align:center;gap:10px;
     }
-    @keyframes blink{50%{opacity:0;}}
+    .empty-doc svg{opacity:.25;}
+    .empty-doc p{font-size:13.5px;color:var(--t3);line-height:1.65;}
 
-    .typing-indicator{
-      display:flex;align-items:center;gap:5px;
-      padding:10px 14px;
-      background:var(--ai-bg);border:1px solid rgba(139,92,246,.18);
-      border-radius:4px 14px 14px 14px;
-      width:fit-content;
-    }
-    .typing-dot{
-      width:6px;height:6px;border-radius:50%;background:var(--p-light);
-      animation:typingBounce 1.2s infinite;
-    }
-    .typing-dot:nth-child(2){animation-delay:.2s;}
-    .typing-dot:nth-child(3){animation-delay:.4s;}
-    @keyframes typingBounce{
-      0%,80%,100%{transform:translateY(0);opacity:.4;}
-      40%{transform:translateY(-5px);opacity:1;}
-    }
-
-    /* ===== REPLY AREA ===== */
-    .reply-area{
-      padding:12px 16px;
+    /* ─── COMPOSE AREA ─────────────────────────────────── */
+    .compose{
+      padding:12px 14px;
+      background:var(--page);
       border-top:1px solid var(--border);
-      background:var(--bg-2);flex-shrink:0;
+      flex-shrink:0;
     }
-    .reply-label{font-size:11px;color:var(--tmuted);margin-bottom:7px;}
-    .reply-row{display:flex;gap:10px;align-items:flex-end;}
-    .reply-textarea{
-      flex:1;min-height:44px;max-height:110px;
-      padding:10px 12px;border-radius:10px;
-      border:1px solid var(--border);background:var(--glass);
-      color:var(--t1);font-size:13.5px;line-height:1.6;
+    .c-types{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;}
+    .c-type{
+      padding:3px 9px;border-radius:12px;font-size:12px;
+      border:1px solid var(--border);background:transparent;
+      color:var(--t3);cursor:pointer;transition:all .15s;
+    }
+    .c-type:hover{color:var(--t2);}
+    .c-type.active[data-type="thought"]{background:var(--thought-bg);border-color:var(--thought-br);color:var(--thought);font-weight:500;}
+    .c-type.active[data-type="task"]   {background:var(--task-bg);   border-color:var(--task-br);   color:var(--task);   font-weight:500;}
+    .c-type.active[data-type="idea"]   {background:var(--idea-bg);   border-color:var(--idea-br);   color:var(--idea);   font-weight:500;}
+    .c-type.active[data-type="plan"]   {background:var(--plan-bg);   border-color:var(--plan-br);   color:var(--plan);   font-weight:500;}
+    .c-row{display:flex;gap:8px;align-items:flex-end;}
+    .c-textarea{
+      flex:1;min-height:60px;max-height:120px;
+      padding:10px 12px;border-radius:8px;
+      border:1px solid var(--border);background:var(--bg);
+      color:var(--t1);font-size:14px;line-height:1.6;
       resize:none;outline:none;font-family:inherit;
-      transition:border-color .2s;
+      transition:border-color .18s,background .18s;
     }
-    .reply-textarea:focus{border-color:var(--p1);}
-    .reply-textarea::placeholder{color:var(--tmuted);}
-    .reply-send{
-      padding:10px 16px;border-radius:9px;
-      border:none;background:linear-gradient(135deg,var(--p1),var(--p2));
-      color:#fff;font-size:13px;font-weight:500;cursor:pointer;
-      transition:all .2s;flex-shrink:0;white-space:nowrap;
+    .c-textarea:focus{border-color:var(--accent-l);background:var(--page);}
+    .c-textarea::placeholder{color:var(--t4);}
+    .c-send{
+      padding:10px 18px;border-radius:8px;border:none;
+      background:var(--accent);color:#fff;
+      font-size:13px;font-weight:500;cursor:pointer;
+      transition:all .18s;flex-shrink:0;
     }
-    .reply-send:hover:not(:disabled){transform:translateY(-1px);}
-    .reply-send:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+    .c-send:hover:not(:disabled){background:#4338ca;transform:translateY(-1px);}
+    .c-send:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+    .c-hint{font-size:11px;color:var(--t4);margin-top:5px;}
 
-    /* ===== MODAL ===== */
-    .modal-overlay{
-      position:fixed;inset:0;background:rgba(0,0,0,.72);
-      backdrop-filter:blur(6px);display:none;
-      align-items:center;justify-content:center;z-index:200;padding:16px;
+    /* ─── GUTTER ─────────────────────────────────────── */
+    .gutter{
+      width:28px;flex-shrink:0;
+      background:var(--bg);
+      z-index:1;
     }
-    .modal-overlay.visible{display:flex;}
-    .modal{
-      background:var(--bg-2);border:1px solid var(--border);
-      border-radius:16px;padding:24px;width:420px;max-width:100%;
+
+    /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
+    .anno-pane{
+      flex:1;min-width:240px;
+      display:flex;flex-direction:column;
+      background:var(--sb-bg);
+      border-left:1px solid var(--border);
     }
-    .modal-title{font-size:17px;font-weight:600;color:var(--t1);margin-bottom:6px;}
-    .modal-sub{font-size:13px;color:var(--tmuted);margin-bottom:18px;line-height:1.5;}
-    .modal-label{font-size:12px;color:var(--t2);margin-bottom:6px;}
-    .modal-input{
-      width:100%;padding:10px 13px;border-radius:9px;
-      border:1px solid var(--border);background:var(--glass);
+    .anno-pane-hdr{
+      padding:11px 14px;
+      font-size:11.5px;font-weight:600;
+      color:var(--t4);text-transform:uppercase;letter-spacing:.6px;
+      border-bottom:1px solid var(--border);
+      background:var(--page);flex-shrink:0;
+    }
+    .anno-scroll{
+      flex:1;overflow-y:auto;
+      padding:12px;
+      display:flex;flex-direction:column;gap:10px;
+    }
+
+    /* Annotation card */
+    .anno-card{
+      background:var(--page);
+      border-radius:10px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      box-shadow:var(--sh-sm);
+      transition:border-color .18s,box-shadow .18s;
+    }
+    .anno-card.sel{border-color:var(--accent-l);box-shadow:0 0 0 2px rgba(99,102,241,.10),var(--sh);}
+
+    .ac-hdr{
+      display:flex;align-items:center;gap:8px;
+      padding:9px 13px;
+      border-bottom:1px solid var(--border);
+      background:var(--sb-bg);
+    }
+    .ac-avatar{
+      width:22px;height:22px;border-radius:7px;
+      background:var(--accent-s);
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;flex-shrink:0;
+    }
+    .ac-title{font-size:12px;font-weight:600;color:var(--t2);}
+    .ac-status{
+      margin-left:auto;font-size:11px;color:var(--t3);
+      display:flex;align-items:center;gap:5px;
+    }
+
+    /* Research/thinking animation */
+    .research-anim{
+      padding:12px 13px;
+      display:flex;flex-direction:column;gap:8px;
+    }
+    .ra-step{
+      display:flex;align-items:center;gap:8px;
+      font-size:12.5px;color:var(--t3);opacity:0;
+      transition:opacity .4s;
+    }
+    .ra-step.visible{opacity:1;}
+    .ra-step.done{color:var(--t4);text-decoration:line-through;opacity:.5;}
+    .ra-icon{font-size:14px;}
+    .ra-spinner{
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid var(--border);
+      border-top-color:var(--accent-l);
+      animation:spin .8s linear infinite;
+      flex-shrink:0;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .ac-body{padding:12px 13px;}
+    .ac-text{
+      font-size:13.5px;line-height:1.8;
+      color:var(--t2);
+      white-space:pre-wrap;word-break:break-word;
+    }
+    .streaming-cur::after{
+      content:'▋';animation:bl .6s infinite;
+      color:var(--accent);font-size:.75em;vertical-align:middle;
+    }
+    @keyframes bl{50%{opacity:0;}}
+
+    /* Reply thread inside annotation */
+    .reply-thread{
+      border-top:1px solid var(--border);
+      padding:10px 13px;
+      display:flex;flex-direction:column;gap:10px;
+    }
+    .thread-row{display:flex;gap:8px;}
+    .thread-ava{
+      width:18px;height:18px;border-radius:5px;
+      flex-shrink:0;margin-top:2px;
+      display:flex;align-items:center;justify-content:center;font-size:10px;
+    }
+    .thread-ava.ai  {background:var(--accent-s);color:var(--accent);}
+    .thread-ava.usr {background:#f3f4f6;color:var(--t2);}
+    .thread-text{font-size:13px;line-height:1.7;color:var(--t2);flex:1;white-space:pre-wrap;word-break:break-word;}
+
+    /* Reply input area */
+    .reply-input-wrap{
+      border-top:1px solid var(--border);
+      padding:10px 13px;
+    }
+    .ri-row{display:flex;gap:7px;align-items:flex-end;}
+    .ri-textarea{
+      flex:1;min-height:36px;max-height:80px;
+      padding:7px 10px;border-radius:7px;
+      border:1px solid var(--border);background:var(--bg);
+      color:var(--t1);font-size:13px;line-height:1.55;
+      resize:none;outline:none;font-family:inherit;
+      transition:border-color .18s,background .18s;
+    }
+    .ri-textarea:focus{border-color:var(--accent-l);background:var(--page);}
+    .ri-textarea::placeholder{color:var(--t4);}
+    .ri-btn{
+      padding:7px 12px;border-radius:7px;border:none;
+      background:var(--accent);color:#fff;
+      font-size:12px;font-weight:500;cursor:pointer;
+      transition:all .15s;flex-shrink:0;
+    }
+    .ri-btn:hover:not(:disabled){background:#4338ca;}
+    .ri-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ─── MODAL ──────────────────────────────────────── */
+    .mo{
+      position:fixed;inset:0;background:rgba(15,15,20,.45);
+      backdrop-filter:blur(5px);
+      display:none;align-items:center;justify-content:center;
+      z-index:300;padding:20px;
+    }
+    .mo.vis{display:flex;}
+    .mo-box{
+      background:var(--page);border:1px solid var(--border);
+      border-radius:14px;padding:24px;
+      width:400px;max-width:100%;
+      box-shadow:0 24px 64px rgba(0,0,0,.15);
+    }
+    .mo-title{font-size:17px;font-weight:700;color:var(--t1);margin-bottom:5px;}
+    .mo-sub  {font-size:13px;color:var(--t3);margin-bottom:18px;line-height:1.5;}
+    .mo-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;}
+    .mo-input{
+      width:100%;padding:9px 12px;border-radius:8px;
+      border:1px solid var(--border);background:var(--bg);
       color:var(--t1);font-size:13.5px;outline:none;
-      transition:border-color .2s;margin-bottom:14px;font-family:inherit;
+      font-family:inherit;margin-bottom:12px;transition:border-color .18s;
     }
-    .modal-input:focus{border-color:var(--p1);}
-    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:4px;}
+    .mo-input:focus{border-color:var(--accent-l);}
+    .mo-err{font-size:12px;color:#ef4444;margin-top:-6px;margin-bottom:10px;display:none;}
+    .mo-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;}
+    .mo-sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .mo-link{font-size:12px;color:var(--accent);cursor:pointer;}
+    .mo-link:hover{text-decoration:underline;}
     .btn-cancel{
-      padding:8px 16px;border-radius:9px;border:1px solid var(--border);
-      background:transparent;color:var(--t2);font-size:13px;cursor:pointer;
-      transition:all .15s;
+      padding:7px 16px;border-radius:8px;
+      border:1px solid var(--border);background:transparent;
+      color:var(--t2);font-size:13px;cursor:pointer;transition:background .15s;
     }
-    .btn-cancel:hover{background:var(--glass-h);}
-    .btn-primary{
-      padding:8px 20px;border-radius:9px;border:none;
-      background:linear-gradient(135deg,var(--p1),var(--p2));
-      color:#fff;font-size:13px;font-weight:500;cursor:pointer;
-      transition:all .15s;
+    .btn-cancel:hover{background:var(--bg);}
+    .btn-ok{
+      padding:7px 18px;border-radius:8px;border:none;
+      background:var(--accent);color:#fff;
+      font-size:13px;font-weight:500;cursor:pointer;transition:background .15s;
     }
-    .btn-primary:hover{transform:translateY(-1px);}
-    .modal-error{font-size:12px;color:#f87171;margin-top:-8px;margin-bottom:10px;display:none;}
-    .modal-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-    .modal-link{font-size:12px;color:var(--p-light);cursor:pointer;text-decoration:underline;}
-    .modal-link:hover{color:var(--t2);}
+    .btn-ok:hover{background:#4338ca;}
+    .btn-danger{
+      padding:7px 18px;border-radius:8px;border:none;
+      background:#ef4444;color:#fff;
+      font-size:13px;font-weight:500;cursor:pointer;
+    }
+    .btn-danger:hover{background:#dc2626;}
 
-    /* ===== TOAST ===== */
+    /* ─── TOAST ─────────────────────────────────────── */
     .toast{
-      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
-      background:var(--bg-3);border:1px solid var(--border);
-      color:var(--t2);padding:10px 20px;border-radius:20px;
-      font-size:13px;z-index:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+      position:fixed;bottom:24px;left:50%;
+      transform:translateX(-50%) translateY(70px);
+      background:var(--t1);color:#fff;
+      padding:9px 20px;border-radius:20px;
+      font-size:13px;z-index:500;
+      transition:transform .3s cubic-bezier(.34,1.56,.64,1);
       pointer-events:none;white-space:nowrap;
     }
     .toast.show{transform:translateX(-50%) translateY(0);}
 
-    /* ===== SCROLLBAR ===== */
-    ::-webkit-scrollbar{width:3px;}
+    /* ─── SCROLLBAR ─────────────────────────────────── */
+    ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:transparent;}
-    ::-webkit-scrollbar-thumb{background:rgba(139,92,246,.25);border-radius:2px;}
-    ::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.45);}
-
-    /* ===== MOBILE ===== */
-    @media(max-width:720px){
-      .left{width:100%;}
-      .right{display:none;position:fixed;inset:0;z-index:50;background:var(--bg);}
-      .right.mobile-open{display:flex;}
-      .mobile-back{display:flex!important;}
-    }
-    .mobile-back{display:none;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer;color:var(--p-light);font-size:14px;}
-    .mobile-back:hover{background:var(--glass);}
+    ::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:2px;}
   </style>
 </head>
 <body>
 
-<!-- Header -->
-<div class="hdr">
-  <span class="hdr-logo">🧠 ThinkNote</span>
-  <span class="hdr-subtitle">思维对话笔记</span>
-  <div class="hdr-right">
-    <span class="sync-status" id="syncStatus">本地</span>
-    <button class="ico-btn" id="settingsBtn" title="API 设置">⚙️</button>
-    <button class="ico-btn" id="authBtn" title="账号">👤</button>
+<!-- ─── HEADER ─────────────────────────────────────────── -->
+<header class="hdr">
+  <div class="logo">
+    <!-- Inline SVG icon: document + annotation bubble -->
+    <svg class="logo-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="7" fill="#4f46e5"/>
+      <!-- document lines -->
+      <rect x="6" y="7" width="11" height="1.5" rx=".75" fill="white" opacity=".9"/>
+      <rect x="6" y="10.5" width="13" height="1.5" rx=".75" fill="white" opacity=".7"/>
+      <rect x="6" y="14" width="9" height="1.5" rx=".75" fill="white" opacity=".7"/>
+      <rect x="6" y="17.5" width="11" height="1.5" rx=".75" fill="white" opacity=".5"/>
+      <!-- annotation bubble -->
+      <rect x="15" y="12" width="10" height="8" rx="3" fill="white" opacity=".95"/>
+      <polygon points="17,20 15.5,22.5 19,20" fill="white" opacity=".95"/>
+      <rect x="16.5" y="13.5" width="7" height="1" rx=".5" fill="#4f46e5" opacity=".7"/>
+      <rect x="16.5" y="15.5" width="5" height="1" rx=".5" fill="#4f46e5" opacity=".7"/>
+    </svg>
+    <span class="logo-name">Think<span>Note</span></span>
   </div>
-</div>
 
-<!-- Main -->
-<div class="main">
+  <div class="hdr-sep"></div>
 
-  <!-- LEFT PANE -->
-  <div class="left">
-    <div class="left-top">
-      <div class="left-top-row">
-        <span class="section-label">我的记录</span>
-        <span class="note-count" id="noteCount">0 条</span>
-      </div>
-      <div class="type-tabs" id="typeTabs">
-        <button class="type-tab active" data-type="all">全部</button>
-        <button class="type-tab" data-type="thought">💭 想法</button>
-        <button class="type-tab" data-type="task">✅ 任务</button>
-        <button class="type-tab" data-type="idea">💡 灵感</button>
-        <button class="type-tab" data-type="plan">📋 计划</button>
-      </div>
-    </div>
+  <div class="type-filters" id="filterTabs">
+    <button class="type-filter active" data-type="all">全部</button>
+    <button class="type-filter" data-type="thought">💭 想法</button>
+    <button class="type-filter" data-type="task">✅ 任务</button>
+    <button class="type-filter" data-type="idea">💡 灵感</button>
+    <button class="type-filter" data-type="plan">📋 计划</button>
+  </div>
 
-    <div class="notes-list" id="notesList"></div>
+  <div class="hdr-right">
+    <span class="sync-pill" id="syncPill">本地</span>
+    <button class="hbtn" id="settingsBtn" title="API 设置">⚙️</button>
+    <button class="hbtn" id="authBtn" title="登录">👤</button>
+  </div>
+</header>
+
+<!-- ─── MAIN ──────────────────────────────────────────── -->
+<div class="main" id="mainContainer">
+  <canvas id="connCanvas"></canvas>
+
+  <!-- LEFT: document -->
+  <div class="doc-pane">
+    <div class="doc-scroll" id="docScroll"></div>
 
     <!-- Compose -->
     <div class="compose">
-      <div class="compose-type-row" id="composeTabs">
-        <button class="compose-type active" data-type="thought">💭 想法</button>
-        <button class="compose-type" data-type="task">✅ 任务</button>
-        <button class="compose-type" data-type="idea">💡 灵感</button>
-        <button class="compose-type" data-type="plan">📋 计划</button>
+      <div class="c-types" id="cTypeTabs">
+        <button class="c-type active" data-type="thought">💭 想法</button>
+        <button class="c-type" data-type="task">✅ 任务</button>
+        <button class="c-type" data-type="idea">💡 灵感</button>
+        <button class="c-type" data-type="plan">📋 计划</button>
       </div>
-      <textarea class="compose-textarea" id="composeInput"
-        placeholder="写下你的想法、任务、灵感或计划…  Ctrl+Enter 发送"></textarea>
-      <div class="compose-bottom">
-        <span class="compose-hint">Ctrl+Enter</span>
-        <button class="send-btn" id="sendBtn">发送 →</button>
+      <div class="c-row">
+        <textarea class="c-textarea" id="cInput"
+          placeholder="写下你的想法、任务、灵感或计划…"></textarea>
+        <button class="c-send" id="cSend">记录 ↵</button>
       </div>
+      <div class="c-hint">Ctrl + Enter 快速记录</div>
     </div>
   </div>
 
-  <!-- RIGHT PANE -->
-  <div class="right" id="rightPane">
-    <div class="mobile-back" id="mobileBack" onclick="closeMobile()">← 返回</div>
+  <!-- GUTTER -->
+  <div class="gutter"></div>
 
-    <!-- Empty state -->
-    <div class="right-empty" id="rightEmpty">
-      <div class="right-empty-icon">💬</div>
-      <div class="right-empty-title">选择一条记录</div>
-      <div class="right-empty-sub">或在左侧写下新的想法<br>AI 会自动开始与你探讨</div>
-    </div>
+  <!-- RIGHT: annotations -->
+  <div class="anno-pane">
+    <div class="anno-pane-hdr">🤖 AI 深度批注</div>
+    <div class="anno-scroll" id="annoScroll"></div>
+  </div>
+</div>
 
-    <!-- Conversation view -->
-    <div class="convo" id="convoView">
-      <div class="convo-hdr">
-        <div class="convo-hdr-top">
-          <span class="convo-type-badge" id="convoTypeBadge">💭 想法</span>
-          <span class="convo-time" id="convoTime"></span>
-        </div>
-        <div class="convo-note-content" id="convoNoteContent"></div>
-      </div>
-
-      <div class="thread" id="threadView"></div>
-
-      <div class="reply-area">
-        <div class="reply-label">继续探讨这个话题</div>
-        <div class="reply-row">
-          <textarea class="reply-textarea" id="replyInput"
-            placeholder="追问 AI，或补充你的想法… Ctrl+Enter 发送"></textarea>
-          <button class="reply-send" id="replyBtn">回复 →</button>
-        </div>
-      </div>
+<!-- ─── MODALS ─────────────────────────────────────────── -->
+<div class="mo" id="moSettings">
+  <div class="mo-box">
+    <div class="mo-title">⚙️ API 设置</div>
+    <div class="mo-sub">输入 DeepSeek API Key 以启用 AI 批注</div>
+    <div class="mo-label">DeepSeek API Key</div>
+    <input class="mo-input" type="password" id="apiKeyIn" placeholder="sk-xxxxxxxxxxxxxxxx">
+    <div class="mo-err" id="apiErr">请输入有效的 API Key</div>
+    <div class="mo-actions">
+      <button class="btn-cancel" onclick="closeMo('moSettings')">取消</button>
+      <button class="btn-ok" onclick="saveKey()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- Settings Modal -->
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal">
-    <div class="modal-title">⚙️ API 设置</div>
-    <div class="modal-sub">输入 DeepSeek API Key 以启用 AI 思维对话功能</div>
-    <div class="modal-label">DeepSeek API Key</div>
-    <input class="modal-input" type="password" id="apiKeyInput" placeholder="sk-xxxxxxxxxxxxxxxx">
-    <div class="modal-error" id="apiKeyError">API Key 格式有误</div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('settingsModal')">取消</button>
-      <button class="btn-primary" onclick="saveApiKey()">保存</button>
+<div class="mo" id="moAuth">
+  <div class="mo-box">
+    <div class="mo-title" id="moAuthTitle">👤 登录账号</div>
+    <div class="mo-sub"  id="moAuthSub">登录后笔记与批注自动云同步</div>
+    <div class="mo-label">邮箱</div>
+    <input class="mo-input" type="email" id="authEmail" placeholder="your@email.com">
+    <div class="mo-label">密码</div>
+    <input class="mo-input" type="password" id="authPwd" placeholder="密码">
+    <div class="mo-err" id="authErr"></div>
+    <div class="mo-actions">
+      <span class="mo-link" id="authToggle" onclick="toggleAuth()">没有账号？注册</span>
+      <button class="btn-cancel" onclick="closeMo('moAuth')">取消</button>
+      <button class="btn-ok" id="authSubmit" onclick="doAuth()">登录</button>
+    </div>
+    <hr class="mo-sep" id="logoutSep" style="display:none">
+    <div style="text-align:center;display:none" id="logoutArea">
+      <span class="mo-link" onclick="doLogout()">退出登录</span>
     </div>
   </div>
 </div>
 
-<!-- Auth Modal -->
-<div class="modal-overlay" id="authModal">
-  <div class="modal">
-    <div class="modal-title" id="authTitle">👤 登录账号</div>
-    <div class="modal-sub" id="authSub">登录后笔记将自动同步到云端，多设备共享</div>
-    <div class="modal-label">邮箱</div>
-    <input class="modal-input" type="email" id="authEmail" placeholder="your@email.com">
-    <div class="modal-label">密码</div>
-    <input class="modal-input" type="password" id="authPassword" placeholder="密码">
-    <div class="modal-error" id="authError"></div>
-    <div class="modal-actions">
-      <span class="modal-link" id="authToggleLink" onclick="toggleAuthMode()">没有账号？注册</span>
-      <button class="btn-cancel" onclick="closeModal('authModal')">取消</button>
-      <button class="btn-primary" id="authSubmitBtn" onclick="submitAuth()">登录</button>
-    </div>
-    <hr class="modal-divider" id="logoutDivider" style="display:none">
-    <div style="display:none;text-align:center;" id="logoutSection">
-      <span class="modal-link" onclick="logout()">退出登录</span>
+<div class="mo" id="moDel">
+  <div class="mo-box">
+    <div class="mo-title">删除这条记录？</div>
+    <div class="mo-sub">同时清除与 AI 的全部批注记录，不可恢复。</div>
+    <div class="mo-actions">
+      <button class="btn-cancel" onclick="closeMo('moDel')">取消</button>
+      <button class="btn-danger" onclick="confirmDel()">删除</button>
     </div>
   </div>
 </div>
 
-<!-- Delete confirm -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal">
-    <div class="modal-title">删除这条记录？</div>
-    <div class="modal-sub">同时删除与 AI 的全部对话记录，无法恢复。</div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('deleteModal')">取消</button>
-      <button class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="confirmDelete()">删除</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 'use strict';
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const DB_NAME   = 'ThinkNote';
+const DB_VER    = 1;
+const SB_URL    = 'https://wzlypptsytnqfsmwxpzf.supabase.co';
+const SB_KEY    = 'sb_publishable_9rXFdTyDO2yai9uLBRJSNQ_6irPiu6E';
+const DS_API    = 'https://api.deepseek.com/chat/completions';
+const DS_MODEL  = 'deepseek-v4-pro';
 
-// ===== CONFIG =====
-const DB_NAME    = 'ThinkNote';
-const DB_VER     = 1;
-const SB_URL     = 'https://wzlypptsytnqfsmwxpzf.supabase.co';
-const SB_KEY     = 'sb_publishable_9rXFdTyDO2yai9uLBRJSNQ_6irPiu6E';
-const DS_API     = 'https://api.deepseek.com/chat/completions';
-const SYNC_DELAY = 3000;
-
-const TYPE_META = {
-  thought: { label: '💭 想法', badge: 'thought' },
-  task:    { label: '✅ 任务', badge: 'task'    },
-  idea:    { label: '💡 灵感', badge: 'idea'    },
-  plan:    { label: '📋 计划', badge: 'plan'    },
+const TYPE_COLORS = {
+  thought:'#5b5fcf', task:'#059669', idea:'#d97706', plan:'#2563eb'
+};
+const TYPE_LABELS = {
+  thought:'💭 想法', task:'✅ 任务', idea:'💡 灵感', plan:'📋 计划'
 };
 
-const SYSTEM_PROMPT = `你是「思维伙伴」，一个帮助用户深化思考的AI助手。
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let db         = null;
+let notes      = [];    // [{id, type, content, created_at, thread:[]}]
+let selId      = null;
+let filterType = 'all';
+let cType      = 'thought';
+let streaming  = false;
+let sbSess     = null;
+let syncTimer  = null;
+let delTarget  = null;
+let authMode   = 'login';
+let rafId      = null;
 
-**行为准则：**
-- 对于「想法/灵感」：提出1-2个尖锐问题，挑战假设，指出潜在盲点，帮助完善想法
-- 对于「任务/计划」：分析可行性，拆解关键步骤，预判障碍，给出具体建议
-- 对于多轮对话：持续深挖，帮助用户把问题想得更透彻
-- 回复简洁有力（3-5段），避免冗长罗列
-- 全程用中文，语气像聪明的朋友，而非AI客服
-- 不要只是肯定——适时质疑和挑战才是真正的帮助
-- 每次回复结尾提出1-2个问题，推动进一步思考`;
-
-// ===== STATE =====
-let db          = null;
-let notes       = [];          // [{id,type,content,created_at,thread:[{role,content,ts}]}]
-let currentId   = null;
-let filterType  = 'all';
-let composeType = 'thought';
-let isStreaming = false;
-let sbSession   = null;
-let syncTimer   = null;
-let deleteTargetId = null;
-
-// ===== IndexedDB =====
+// ═══════════════════════════════════════════════════════
+//  IndexedDB
+// ═══════════════════════════════════════════════════════
 function initDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
+  return new Promise((res,rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = e => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains('notes')) {
-        const s = d.createObjectStore('notes', { keyPath: 'id' });
-        s.createIndex('created_at', 'created_at', { unique: false });
+        d.createObjectStore('notes', { keyPath:'id' });
       }
     };
-    req.onsuccess = e => { db = e.target.result; res(); };
-    req.onerror   = () => rej(req.error);
+    r.onsuccess = e => { db = e.target.result; res(); };
+    r.onerror   = () => rej(r.error);
   });
 }
-
 function dbAll() {
-  return new Promise((res, rej) => {
-    const tx  = db.transaction('notes', 'readonly');
-    const req = tx.objectStore('notes').getAll();
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
+  return new Promise((res,rej)=>{
+    const req = db.transaction('notes','readonly').objectStore('notes').getAll();
+    req.onsuccess = ()=>res(req.result);
+    req.onerror   = ()=>rej(req.error);
   });
 }
-
 function dbPut(note) {
-  return new Promise((res, rej) => {
-    const tx  = db.transaction('notes', 'readwrite');
-    const req = tx.objectStore('notes').put(note);
-    req.onsuccess = () => res();
-    req.onerror   = () => rej(req.error);
+  return new Promise((res,rej)=>{
+    const req = db.transaction('notes','readwrite').objectStore('notes').put(note);
+    req.onsuccess = ()=>res();
+    req.onerror   = ()=>rej(req.error);
+  });
+}
+function dbDel(id) {
+  return new Promise((res,rej)=>{
+    const req = db.transaction('notes','readwrite').objectStore('notes').delete(id);
+    req.onsuccess = ()=>res();
+    req.onerror   = ()=>rej(req.error);
   });
 }
 
-function dbDelete(id) {
-  return new Promise((res, rej) => {
-    const tx  = db.transaction('notes', 'readwrite');
-    const req = tx.objectStore('notes').delete(id);
-    req.onsuccess = () => res();
-    req.onerror   = () => rej(req.error);
-  });
+// ═══════════════════════════════════════════════════════
+//  Utils
+// ═══════════════════════════════════════════════════════
+function uid() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>
+    (c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
 }
-
-function uuid() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-}
-
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function fmtTime(iso) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000)   return '刚刚';
-  if (diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
-  if (diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
-  if (diff < 7*86400000) return Math.floor(diff/86400000) + ' 天前';
-  return d.getFullYear() === now.getFullYear()
-    ? `${d.getMonth()+1}/${d.getDate()}`
-    : `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  const d=new Date(iso), now=new Date(), diff=now-d;
+  if(diff<60000)    return '刚刚';
+  if(diff<3600000)  return Math.floor(diff/60000)+'分钟前';
+  if(diff<86400000) return Math.floor(diff/3600000)+'小时前';
+  if(diff<604800000)return Math.floor(diff/86400000)+'天前';
+  return `${d.getMonth()+1}/${d.getDate()}`;
 }
-
 function fmtFull(iso) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const d=new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function autoResize(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,200)+'px';
 }
 
-// ===== RENDER NOTES LIST =====
-function sortedNotes() {
-  return [...notes].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-}
+// ═══════════════════════════════════════════════════════
+//  CANVAS CONNECTOR LINES
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('connCanvas');
+const ctx    = canvas.getContext('2d');
 
-function filteredNotes() {
-  const s = sortedNotes();
-  if (filterType === 'all') return s;
-  return s.filter(n => n.type === filterType);
-}
+function drawConnectors() {
+  const main = document.getElementById('mainContainer');
+  const mr   = main.getBoundingClientRect();
+  canvas.width  = mr.width;
+  canvas.height = mr.height;
+  canvas.style.width  = mr.width  + 'px';
+  canvas.style.height = mr.height + 'px';
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-function renderNotesList() {
-  const list = filteredNotes();
-  const el   = document.getElementById('notesList');
-  document.getElementById('noteCount').textContent = notes.length + ' 条';
+  notes.forEach(note => {
+    if (filterType !== 'all' && note.type !== filterType) return;
+    const noteEl = document.querySelector(`.note-entry[data-id="${note.id}"]`);
+    const annoEl = document.querySelector(`.anno-card[data-id="${note.id}"]`);
+    if (!noteEl || !annoEl) return;
 
-  if (list.length === 0) {
-    el.innerHTML = `<div class="empty-notes">
-      <div class="empty-notes-icon">📝</div>
-      <div class="empty-notes-text">还没有记录<br>在下方写下你的第一个想法</div>
-    </div>`;
-    return;
-  }
+    const nr = noteEl.getBoundingClientRect();
+    const ar = annoEl.getBoundingClientRect();
+    if (nr.bottom < mr.top || nr.top > mr.bottom) return;
+    if (ar.bottom < mr.top || ar.top > mr.bottom) return;
 
-  el.innerHTML = list.map(n => {
-    const m    = TYPE_META[n.type] || TYPE_META.thought;
-    const msgs = n.thread ? n.thread.length : 0;
-    const isActive = n.id === currentId;
-    return `<div class="note-card${isActive ? ' active' : ''}" data-id="${n.id}" onclick="selectNote('${n.id}')">
-      <div class="nc-top">
-        <span class="type-badge ${n.type}">${m.label}</span>
-        <span class="nc-time">${fmtTime(n.created_at)}</span>
-      </div>
-      <div class="nc-preview">${escHtml(n.content)}</div>
-      <div class="nc-footer">
-        <span class="nc-thread-info">${msgs > 0 ? `💬 ${msgs} 条对话` : '等待 AI 回应'}</span>
-        <button class="nc-del" onclick="askDelete(event,'${n.id}')" title="删除">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-}
+    const x1 = nr.right  - mr.left;
+    const y1 = nr.top  + nr.height/2  - mr.top;
+    const x2 = ar.left  - mr.left;
+    const y2 = ar.top  + ar.height/2  - mr.top;
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+    const isActive = note.id === selId;
+    const col      = TYPE_COLORS[note.type] || '#6366f1';
 
-// ===== SELECT NOTE =====
-function selectNote(id) {
-  currentId = id;
-  const note = notes.find(n => n.id === id);
-  if (!note) return;
+    ctx.strokeStyle = isActive ? col : '#d1cdc7';
+    ctx.lineWidth   = isActive ? 1.5 : 1;
+    ctx.setLineDash( isActive ? [] : [4,4] );
 
-  // Update list highlight
-  document.querySelectorAll('.note-card').forEach(c => {
-    c.classList.toggle('active', c.dataset.id === id);
+    // Bezier curve
+    const cpx1 = x1 + (x2-x1)*0.45;
+    const cpx2 = x1 + (x2-x1)*0.55;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.bezierCurveTo(cpx1,y1, cpx2,y2, x2,y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Endpoint dots
+    ctx.fillStyle = isActive ? col : '#c9c4bc';
+    [{ x:x1, y:y1 }, { x:x2, y:y2 }].forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, isActive?3.5:2.5, 0, Math.PI*2);
+      ctx.fill();
+    });
   });
-
-  // Show conversation
-  document.getElementById('rightEmpty').style.display = 'none';
-  const convo = document.getElementById('convoView');
-  convo.classList.add('visible');
-
-  const m = TYPE_META[note.type] || TYPE_META.thought;
-  const badge = document.getElementById('convoTypeBadge');
-  badge.textContent = m.label;
-  badge.className = 'convo-type-badge ' + note.type;
-  document.getElementById('convoTime').textContent = fmtFull(note.created_at);
-  document.getElementById('convoNoteContent').textContent = note.content;
-
-  renderThread(note);
-  scrollThread();
-
-  // Mobile
-  if (window.innerWidth <= 720) {
-    document.getElementById('rightPane').classList.add('mobile-open');
-  }
 }
 
-// ===== RENDER THREAD =====
-function renderThread(note) {
-  const el = document.getElementById('threadView');
-  if (!note.thread || note.thread.length === 0) {
-    el.innerHTML = '';
+function schedRedraw() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(()=>{ drawConnectors(); rafId=null; });
+}
+
+// ═══════════════════════════════════════════════════════
+//  AI SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════
+const SYSTEM_PROMPT = `你是「ThinkNote 深度批注助手」。你的职责是对用户的每条笔记进行严谨、深入的学术级批注。
+
+【批注前的工作】
+- 仔细分析该条目的核心意图与潜在背景
+- 调用你掌握的相关领域知识、前沿案例、理论框架和数据
+- 从多个维度（可行性、风险、机会、盲点、资源）进行全面评估
+
+【批注结构】（按需灵活调整）
+1. **核心理解**：用1-2句精准描述你对这条笔记的理解
+2. **深度分析**：2-3个关键洞察，有理有据，引用相关知识背景
+3. **潜在盲点或挑战**：批判性指出容易被忽视的风险或矛盾
+4. **建议**：具体、可操作的下一步或优化方向
+5. **关键问题**：提出1个最有价值的追问，推动更深层思考
+
+【对不同类型笔记的处理】
+- 💭 想法：分析创新性、可行性、市场/学术背景
+- ✅ 任务：拆解执行路径、预判障碍、优化优先级
+- 💡 灵感：挖掘深层价值、建立知识联系、探索延伸方向
+- 📋 计划：评估完整性、资源匹配度、时间节点合理性
+
+【风格要求】
+- 严谨但不刻板，像博学的导师与实践者
+- 用中文，语言精炼有力，不废话
+- 敢于质疑和挑战，真正有价值的批注不只是认同`;
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function visible(notes) {
+  if (filterType === 'all') return notes;
+  return notes.filter(n => n.type === filterType);
+}
+function sorted() {
+  return [...notes].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+}
+
+function renderAll() {
+  const list = visible(sorted());
+  renderNotes(list);
+  renderAnnos(list);
+  setTimeout(schedRedraw, 100);
+}
+
+function renderNotes(list) {
+  const el = document.getElementById('docScroll');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-doc">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+        <rect x="10" y="6" width="32" height="40" rx="5" fill="#e5e1da"/>
+        <rect x="15" y="13" width="18" height="2" rx="1" fill="#c9c4bc"/>
+        <rect x="15" y="19" width="22" height="2" rx="1" fill="#c9c4bc"/>
+        <rect x="15" y="25" width="14" height="2" rx="1" fill="#c9c4bc"/>
+        <rect x="15" y="31" width="20" height="2" rx="1" fill="#c9c4bc"/>
+      </svg>
+      <p>在下方写下你的第一条笔记<br>AI 将自动进行深度批注</p>
+    </div>`;
     return;
   }
-  el.innerHTML = note.thread.map((msg,i) => {
-    const isAI = msg.role === 'assistant';
-    const isLast = i === note.thread.length - 1;
-    const streaming = isStreaming && isLast && isAI;
-    return `<div class="msg ${isAI ? 'ai' : 'user'}">
-      <div class="msg-meta">
-        <div class="msg-avatar">${isAI ? '🤖' : '👤'}</div>
-        <span>${isAI ? 'ThinkNote AI' : '我'}</span>
-        <span>${fmtTime(msg.ts)}</span>
+  el.innerHTML = list.map(n => {
+    const badge    = TYPE_LABELS[n.type] || n.type;
+    const hasAnno  = n.thread && n.thread.length > 0;
+    const annoInfo = hasAnno ? `🤖 ${Math.ceil(n.thread.filter(m=>m.role==='assistant').length)} 条批注` : '等待 AI 批注';
+    return `<div class="note-entry${n.id===selId?' sel':''}" data-id="${n.id}" data-type="${n.type}" onclick="selNote('${n.id}')">
+      <div class="ne-top">
+        <span class="ne-badge ${n.type}">${badge}</span>
+        <span class="ne-time">${fmtFull(n.created_at)}</span>
       </div>
-      <div class="msg-bubble${streaming ? ' streaming-cursor' : ''}">${escHtml(msg.content)}</div>
+      <div class="ne-content">${esc(n.content)}</div>
+      <div class="ne-foot">
+        <span class="ne-anno-pill">${hasAnno ? '🤖' : '⏳'} ${annoInfo}</span>
+        <button class="ne-del" onclick="askDel(event,'${n.id}')" title="删除">🗑</button>
+      </div>
     </div>`;
   }).join('');
 }
 
-function scrollThread() {
-  const el = document.getElementById('threadView');
-  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+function renderAnnos(list) {
+  const el = document.getElementById('annoScroll');
+  el.innerHTML = list.map(n => {
+    const isActive = n.id === selId;
+    const col      = TYPE_COLORS[n.type] || '#6366f1';
+
+    let bodyHtml = '';
+
+    // Check streaming state
+    const streamingThis = streaming && n.id === selId;
+
+    if (!n._annoStatus || n._annoStatus === 'idle') {
+      bodyHtml = `<div class="ac-body">
+        <div class="ac-text" style="color:var(--t4);font-size:12.5px;font-style:italic;">等待记录后 AI 自动开始批注…</div>
+      </div>`;
+    } else if (n._annoStatus === 'researching' || n._annoStatus === 'thinking') {
+      bodyHtml = buildResearchHtml(n);
+    } else if (n._annoStatus === 'streaming' || n._annoStatus === 'done') {
+      bodyHtml = buildDoneHtml(n, streamingThis);
+    }
+
+    const statusLabel = {
+      'idle':        '',
+      'researching': '🔍 查阅资料',
+      'thinking':    '💭 整理思路',
+      'streaming':   '✍️ 批注中',
+      'done':        `${fmtTime(n._lastAnnoTime||n.created_at)}`
+    }[n._annoStatus || 'idle'] || '';
+
+    return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}" onclick="selNote('${n.id}')">
+      <div class="ac-hdr">
+        <div class="ac-avatar">🤖</div>
+        <div class="ac-title">AI 深度批注</div>
+        <div class="ac-status">
+          ${streamingThis ? '<div class="ra-spinner"></div>' : ''}
+          <span>${esc(statusLabel)}</span>
+        </div>
+      </div>
+      ${bodyHtml}
+    </div>`;
+  }).join('');
+
+  // Attach reply button listeners
+  document.querySelectorAll('.ri-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.anno-card').dataset.id;
+      sendReply(id);
+    });
+  });
+  document.querySelectorAll('.ri-textarea').forEach(ta => {
+    ta.addEventListener('keydown', e=>{
+      if (e.key==='Enter'&&(e.ctrlKey||e.metaKey)) {
+        const id = ta.closest('.anno-card').dataset.id;
+        sendReply(id);
+      }
+    });
+    ta.addEventListener('input', ()=>autoResize(ta));
+  });
 }
 
-function showTypingIndicator() {
-  const el = document.getElementById('threadView');
-  const ind = document.createElement('div');
-  ind.className = 'msg ai';
-  ind.id = 'typingIndicator';
-  ind.innerHTML = `<div class="msg-meta">
-    <div class="msg-avatar">🤖</div>
-    <span>ThinkNote AI</span>
-    <span>正在思考…</span>
-  </div>
-  <div class="typing-indicator">
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
+function buildResearchHtml(note) {
+  const steps = [
+    { key:'s1', icon:'🔍', text:'查阅相关领域知识与背景…' },
+    { key:'s2', icon:'📊', text:'分析核心要素与潜在影响…' },
+    { key:'s3', icon:'💭', text:'整理批注思路与关键洞察…' },
+  ];
+  return `<div class="research-anim">
+    ${steps.map((s,i) => {
+      const isVisible = note._resStep >= i;
+      const isDone    = note._resStep > i;
+      return `<div class="ra-step${isVisible?' visible':''}${isDone?' done':''}" id="rs_${note.id}_${i}">
+        <span class="ra-icon">${s.icon}</span>
+        ${!isDone ? '<div class="ra-spinner"></div>' : '<span style="font-size:13px">✓</span>'}
+        <span>${esc(s.text)}</span>
+      </div>`;
+    }).join('')}
   </div>`;
-  el.appendChild(ind);
-  scrollThread();
 }
 
-function removeTypingIndicator() {
-  const el = document.getElementById('typingIndicator');
-  if (el) el.remove();
+function buildDoneHtml(note, isStreaming) {
+  const thread  = note.thread || [];
+  const firstAI = thread.find(m=>m.role==='assistant');
+  const rest    = firstAI ? thread.slice(thread.indexOf(firstAI)+1) : [];
+
+  let mainText = firstAI ? firstAI.content : '';
+  const html = `<div class="ac-body">
+    <div class="ac-text${isStreaming&&thread[thread.length-1]?.role==='assistant'?' streaming-cur':''}" id="actext_${note.id}">${esc(mainText)}</div>
+  </div>
+  ${rest.length>0 ? `<div class="reply-thread">${
+    rest.map(m=>`<div class="thread-row">
+      <div class="thread-ava ${m.role==='assistant'?'ai':'usr'}">${m.role==='assistant'?'🤖':'👤'}</div>
+      <div class="thread-text${isStreaming&&m===thread[thread.length-1]&&m.role==='assistant'?' streaming-cur':''}">${esc(m.content)}</div>
+    </div>`).join('')
+  }</div>` : ''}
+  <div class="reply-input-wrap">
+    <div class="ri-row">
+      <textarea class="ri-textarea" placeholder="追问 AI，或补充新思路… Ctrl+Enter"${streaming?' disabled':''}></textarea>
+      <button class="ri-btn"${streaming?' disabled':''}>追问 →</button>
+    </div>
+  </div>`;
+  return html;
 }
 
-// ===== DeepSeek STREAMING =====
-async function streamAI(note, userContent) {
+// ═══════════════════════════════════════════════════════
+//  SELECT NOTE
+// ═══════════════════════════════════════════════════════
+function selNote(id) {
+  selId = id;
+  document.querySelectorAll('.note-entry').forEach(el=>
+    el.classList.toggle('sel', el.dataset.id===id));
+  document.querySelectorAll('.anno-card').forEach(el=>
+    el.classList.toggle('sel', el.dataset.id===id));
+
+  // Scroll annotation into view
+  const anno = document.querySelector(`.anno-card[data-id="${id}"]`);
+  if (anno) anno.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+  schedRedraw();
+}
+
+// ═══════════════════════════════════════════════════════
+//  ADD NOTE
+// ═══════════════════════════════════════════════════════
+async function addNote() {
+  const ta      = document.getElementById('cInput');
+  const content = ta.value.trim();
+  if (!content || streaming) return;
+
+  const note = {
+    id:          uid(),
+    type:        cType,
+    content,
+    created_at:  new Date().toISOString(),
+    thread:      [],
+    _annoStatus: 'idle',
+    _resStep:    -1,
+  };
+  notes.unshift(note);
+  ta.value = '';
+  ta.style.height = 'auto';
+
+  await dbPut(note);
+  renderAll();
+  selNote(note.id);
+
+  // Scroll note into view
+  const noteEl = document.querySelector(`.note-entry[data-id="${note.id}"]`);
+  if (noteEl) noteEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+  await annotate(note.id, null);
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANNOTATE (initial AI annotation with research delay)
+// ═══════════════════════════════════════════════════════
+async function annotate(noteId, replyContent) {
+  const note = notes.find(n=>n.id===noteId);
+  if (!note || streaming) return;
+
   const apiKey = localStorage.getItem('deepseek_api_key');
   if (!apiKey) {
-    openModal('settingsModal');
+    openMo('moSettings');
     showToast('请先设置 API Key');
     return;
   }
 
-  if (isStreaming) return;
-  isStreaming = true;
-  setReplyDisabled(true);
-  document.getElementById('sendBtn').disabled = true;
+  streaming = true;
+  document.getElementById('cSend').disabled = true;
 
-  // Build messages
-  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
-
-  // Add context: the user's original note as first user message
-  if (note.thread.length === 0 || note.thread[0].role !== 'user') {
-    // First AI call: include original note + type context
-    const typeLabel = TYPE_META[note.type]?.label || '想法';
-    messages.push({
-      role: 'user',
-      content: `[${typeLabel}]\n${userContent}`
-    });
-  } else {
-    // Build from thread
-    note.thread.forEach(m => {
-      messages.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content });
-    });
-    messages.push({ role: 'user', content: userContent });
+  // If this is a reply, add user message first
+  if (replyContent) {
+    note.thread.push({ role:'user', content:replyContent, ts:new Date().toISOString() });
+    await dbPut(note);
   }
 
-  // Show typing
-  showTypingIndicator();
+  // ── Research phase (only for initial annotation) ──
+  if (!replyContent) {
+    note._annoStatus = 'researching';
+    note._resStep    = 0;
+    renderAll();
+    selNote(noteId);
+    await delay(1200);
+
+    note._resStep = 1;
+    updateResearchStep(noteId, 1);
+    await delay(1200);
+
+    note._annoStatus = 'thinking';
+    note._resStep    = 2;
+    updateResearchStep(noteId, 2);
+    await delay(1000);
+  } else {
+    // For replies, just show brief thinking
+    note._annoStatus = 'thinking';
+    renderAll(); selNote(noteId);
+    await delay(800);
+  }
+
+  // ── Build messages ──
+  const messages = [{ role:'system', content:SYSTEM_PROMPT }];
+  const typeLabel = TYPE_LABELS[note.type] || '笔记';
+
+  if (note.thread.length === 0 || (note.thread.length === 1 && note.thread[0].role==='user' && replyContent)) {
+    // Initial annotation
+    messages.push({
+      role:'user',
+      content:`[类型：${typeLabel}]\n\n${note.content}\n\n请对以上内容进行深度批注。`
+    });
+  } else {
+    // Build from existing thread
+    const firstUserMsg = {
+      role:'user',
+      content:`[类型：${typeLabel}]\n\n${note.content}\n\n请对以上内容进行深度批注。`
+    };
+    messages.push(firstUserMsg);
+    note.thread.forEach(m => {
+      messages.push({ role:m.role==='assistant'?'assistant':'user', content:m.content });
+    });
+  }
+
+  // ── Start streaming ──
+  note._annoStatus = 'streaming';
+  renderAll(); selNote(noteId);
 
   let fullContent = '';
-  let aiMsgIndex = -1;
+  let msgIdx      = -1;
 
   try {
     const resp = await fetch(DS_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
+      body:JSON.stringify({
+        model:      DS_MODEL,
         messages,
-        stream: true,
+        stream:     true,
         max_tokens: 2000,
-        temperature: 1.0
+        temperature:1.0
       })
     });
 
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
+      const err = await resp.json().catch(()=>({}));
       throw new Error(err.error?.message || `HTTP ${resp.status}`);
     }
 
-    removeTypingIndicator();
+    // Add AI message placeholder
+    const aiMsg = { role:'assistant', content:'', ts:new Date().toISOString() };
+    if (!replyContent) {
+      note.thread = [aiMsg];  // first annotation replaces empty thread
+    } else {
+      note.thread.push(aiMsg);
+    }
+    msgIdx = note.thread.length - 1;
 
-    // Add placeholder AI message
-    const aiMsg = { role: 'assistant', content: '', ts: new Date().toISOString() };
-    note.thread.push(aiMsg);
-    aiMsgIndex = note.thread.length - 1;
-    renderThread(note);
-    scrollThread();
+    renderAll(); selNote(noteId);
 
     const reader  = resp.body.getReader();
     const decoder = new TextDecoder();
-    let buffer    = '';
+    let buf = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-
+      buf += decoder.decode(value, { stream:true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const data = line.slice(6).trim();
         if (data === '[DONE]') continue;
         try {
-          const parsed  = JSON.parse(data);
-          const chunk   = parsed.choices?.[0]?.delta?.content;
+          const chunk = JSON.parse(data).choices?.[0]?.delta?.content;
           if (chunk) {
             fullContent += chunk;
-            note.thread[aiMsgIndex].content = fullContent;
-            // Update bubble in place
-            const bubbles = document.querySelectorAll('#threadView .msg-bubble');
-            const lastBubble = bubbles[bubbles.length - 1];
-            if (lastBubble) {
-              lastBubble.textContent = fullContent;
-              lastBubble.classList.add('streaming-cursor');
+            note.thread[msgIdx].content = fullContent;
+            // Live update text element
+            const id      = replyContent ? `thread_${noteId}_${msgIdx}` : `actext_${noteId}`;
+            const textEl  = document.getElementById(`actext_${noteId}`);
+            const lastMsg = document.querySelector(`.anno-card[data-id="${noteId}"] .reply-thread .thread-text:last-child`);
+            if (!replyContent && textEl) {
+              textEl.textContent = fullContent;
+              textEl.classList.add('streaming-cur');
+            } else if (replyContent && lastMsg) {
+              lastMsg.textContent = fullContent;
+              lastMsg.classList.add('streaming-cur');
+            } else {
+              // Fallback: full re-render
+              renderAll(); selNote(noteId);
             }
-            scrollThread();
+            // Scroll annotation
+            const ac = document.querySelector(`.anno-card[data-id="${noteId}"]`);
+            if (ac) ac.querySelector('.ac-body, .reply-thread')?.scrollIntoView?.({ block:'nearest' });
           }
-        } catch(_) {}
+        } catch(_){}
       }
     }
 
     // Finalize
-    if (aiMsgIndex >= 0) {
-      note.thread[aiMsgIndex].content = fullContent;
-      note.thread[aiMsgIndex].ts      = new Date().toISOString();
+    if (msgIdx >= 0) {
+      note.thread[msgIdx].content = fullContent;
+      note.thread[msgIdx].ts      = new Date().toISOString();
     }
-    isStreaming = false;
-    renderThread(note);
+    note._annoStatus   = 'done';
+    note._lastAnnoTime = new Date().toISOString();
+
     await dbPut(note);
-    renderNotesList();
-    scheduleSyncCloud();
-
-  } catch (e) {
-    removeTypingIndicator();
-    isStreaming = false;
-    if (aiMsgIndex >= 0) note.thread.splice(aiMsgIndex, 1);
-    showToast('AI 请求失败: ' + e.message);
-    console.error(e);
-  } finally {
-    isStreaming = false;
-    setReplyDisabled(false);
-    document.getElementById('sendBtn').disabled = false;
-    scrollThread();
-  }
-}
-
-function setReplyDisabled(d) {
-  document.getElementById('replyBtn').disabled   = d;
-  document.getElementById('replyInput').disabled = d;
-}
-
-// ===== ADD NOTE =====
-async function addNote() {
-  const input   = document.getElementById('composeInput');
-  const content = input.value.trim();
-  if (!content || isStreaming) return;
-
-  const note = {
-    id:         uuid(),
-    type:       composeType,
-    content,
-    created_at: new Date().toISOString(),
-    thread:     []
-  };
-
-  notes.unshift(note);
-  input.value = '';
-  input.style.height = 'auto';
-
-  await dbPut(note);
-  renderNotesList();
-  selectNote(note.id);
-
-  // Auto-trigger AI
-  await streamAI(note, content);
-}
-
-// ===== REPLY =====
-async function sendReply() {
-  const input   = document.getElementById('replyInput');
-  const content = input.value.trim();
-  if (!content || isStreaming || !currentId) return;
-
-  const note = notes.find(n => n.id === currentId);
-  if (!note) return;
-
-  // Add user message to thread
-  note.thread.push({ role: 'user', content, ts: new Date().toISOString() });
-  input.value = '';
-  input.style.height = 'auto';
-
-  renderThread(note);
-  scrollThread();
-  await dbPut(note);
-  renderNotesList();
-
-  // AI response
-  await streamAIReply(note);
-}
-
-async function streamAIReply(note) {
-  const apiKey = localStorage.getItem('deepseek_api_key');
-  if (!apiKey) { openModal('settingsModal'); return; }
-  if (isStreaming) return;
-
-  isStreaming = true;
-  setReplyDisabled(true);
-  document.getElementById('sendBtn').disabled = true;
-
-  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
-
-  // First message: include type context
-  const typeLabel = TYPE_META[note.type]?.label || '想法';
-  const firstUser = note.thread.find(m => m.role === 'user');
-  if (firstUser) {
-    messages.push({ role: 'user', content: `[${typeLabel}]\n${firstUser.content}` });
-  }
-
-  // Rest of thread
-  const rest = firstUser ? note.thread.slice(note.thread.indexOf(firstUser) + 1) : note.thread;
-  rest.forEach(m => messages.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
-
-  showTypingIndicator();
-
-  let fullContent = '';
-  let aiMsgIndex  = -1;
-
-  try {
-    const resp = await fetch(DS_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages,
-        stream: true,
-        max_tokens: 2000,
-        temperature: 1.0
-      })
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${resp.status}`);
-    }
-
-    removeTypingIndicator();
-
-    const aiMsg = { role: 'assistant', content: '', ts: new Date().toISOString() };
-    note.thread.push(aiMsg);
-    aiMsgIndex = note.thread.length - 1;
-    renderThread(note);
-    scrollThread();
-
-    const reader  = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer    = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(data);
-          const chunk  = parsed.choices?.[0]?.delta?.content;
-          if (chunk) {
-            fullContent += chunk;
-            note.thread[aiMsgIndex].content = fullContent;
-            const bubbles    = document.querySelectorAll('#threadView .msg-bubble');
-            const lastBubble = bubbles[bubbles.length - 1];
-            if (lastBubble) {
-              lastBubble.textContent = fullContent;
-              lastBubble.classList.add('streaming-cursor');
-            }
-            scrollThread();
-          }
-        } catch(_) {}
-      }
-    }
-
-    if (aiMsgIndex >= 0) {
-      note.thread[aiMsgIndex].content = fullContent;
-      note.thread[aiMsgIndex].ts      = new Date().toISOString();
-    }
-    isStreaming = false;
-    renderThread(note);
-    await dbPut(note);
-    renderNotesList();
+    renderAll(); selNote(noteId);
     scheduleSyncCloud();
 
   } catch(e) {
-    removeTypingIndicator();
-    isStreaming = false;
-    if (aiMsgIndex >= 0) note.thread.splice(aiMsgIndex, 1);
-    showToast('AI 回复失败: ' + e.message);
+    note._annoStatus = 'done';
+    if (msgIdx >= 0) note.thread.splice(msgIdx, 1);
+    showToast('AI 批注失败: ' + e.message);
     console.error(e);
+    renderAll(); selNote(noteId);
   } finally {
-    isStreaming = false;
-    setReplyDisabled(false);
-    document.getElementById('sendBtn').disabled = false;
-    scrollThread();
+    streaming = false;
+    document.getElementById('cSend').disabled = false;
   }
 }
 
-// ===== DELETE =====
-function askDelete(e, id) {
+function updateResearchStep(noteId, step) {
+  // Try to update just the step without full re-render
+  const note = notes.find(n=>n.id===noteId);
+  if (!note) return;
+  note._resStep = step;
+  // Update DOM directly
+  for (let i=0; i<step; i++) {
+    const el = document.getElementById(`rs_${noteId}_${i}`);
+    if (el) {
+      el.classList.add('visible','done');
+      const spinner = el.querySelector('.ra-spinner');
+      if (spinner) spinner.outerHTML = '<span style="font-size:13px">✓</span>';
+    }
+  }
+  const cur = document.getElementById(`rs_${noteId}_${step}`);
+  if (cur) cur.classList.add('visible');
+  schedRedraw();
+}
+
+// ═══════════════════════════════════════════════════════
+//  SEND REPLY
+// ═══════════════════════════════════════════════════════
+function sendReply(noteId) {
+  const card = document.querySelector(`.anno-card[data-id="${noteId}"]`);
+  if (!card) return;
+  const ta      = card.querySelector('.ri-textarea');
+  const content = ta?.value?.trim();
+  if (!content || streaming) return;
+  ta.value = '';
+  ta.style.height = 'auto';
+  annotate(noteId, content);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DELETE
+// ═══════════════════════════════════════════════════════
+function askDel(e, id) {
   e.stopPropagation();
-  deleteTargetId = id;
-  openModal('deleteModal');
+  delTarget = id;
+  openMo('moDel');
 }
-
-async function confirmDelete() {
-  if (!deleteTargetId) return;
-  await dbDelete(deleteTargetId);
-  notes = notes.filter(n => n.id !== deleteTargetId);
-  if (currentId === deleteTargetId) {
-    currentId = null;
-    document.getElementById('rightEmpty').style.display = '';
-    document.getElementById('convoView').classList.remove('visible');
-  }
-  deleteTargetId = null;
-  closeModal('deleteModal');
-  renderNotesList();
+async function confirmDel() {
+  if (!delTarget) return;
+  await dbDel(delTarget);
+  notes = notes.filter(n=>n.id!==delTarget);
+  if (selId === delTarget) selId = null;
+  delTarget = null;
+  closeMo('moDel');
+  renderAll();
   scheduleSyncCloud();
   showToast('已删除');
 }
 
-// ===== FILTER TABS =====
-function initFilterTabs() {
-  document.getElementById('typeTabs').addEventListener('click', e => {
-    const btn = e.target.closest('.type-tab');
-    if (!btn) return;
-    filterType = btn.dataset.type;
-    document.querySelectorAll('.type-tab').forEach(b => b.classList.toggle('active', b === btn));
-    renderNotesList();
-  });
-}
+// ═══════════════════════════════════════════════════════
+//  FILTER TABS
+// ═══════════════════════════════════════════════════════
+document.getElementById('filterTabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.type-filter');
+  if (!btn) return;
+  filterType = btn.dataset.type;
+  document.querySelectorAll('.type-filter').forEach(b=>b.classList.toggle('active',b===btn));
+  renderAll();
+});
 
-// ===== COMPOSE TABS =====
-function initComposeTabs() {
-  document.getElementById('composeTabs').addEventListener('click', e => {
-    const btn = e.target.closest('.compose-type');
-    if (!btn) return;
-    composeType = btn.dataset.type;
-    document.querySelectorAll('.compose-type').forEach(b => b.classList.toggle('active', b === btn));
-  });
-}
+document.getElementById('cTypeTabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.c-type');
+  if (!btn) return;
+  cType = btn.dataset.type;
+  document.querySelectorAll('.c-type').forEach(b=>b.classList.toggle('active',b===btn));
+});
 
-// ===== SETTINGS =====
-function saveApiKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) {
-    document.getElementById('apiKeyError').style.display = 'block';
-    document.getElementById('apiKeyError').textContent = '请输入 API Key';
-    return;
-  }
-  localStorage.setItem('deepseek_api_key', key);
-  closeModal('settingsModal');
+// ═══════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════
+function saveKey() {
+  const k = document.getElementById('apiKeyIn').value.trim();
+  if (!k) { document.getElementById('apiErr').style.display='block'; return; }
+  localStorage.setItem('deepseek_api_key', k);
+  closeMo('moSettings');
   showToast('API Key 已保存');
 }
 
-function openSettingsModal() {
-  const key = localStorage.getItem('deepseek_api_key') || '';
-  document.getElementById('apiKeyInput').value = key ? key.slice(0,8) + '...' : '';
-  document.getElementById('apiKeyError').style.display = 'none';
-  openModal('settingsModal');
-}
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  const k = localStorage.getItem('deepseek_api_key')||'';
+  document.getElementById('apiKeyIn').value = k?k.slice(0,8)+'…':'';
+  document.getElementById('apiErr').style.display='none';
+  openMo('moSettings');
+});
 
-// ===== SUPABASE =====
-async function sbFetch(path, opts={}) {
-  const headers = {
-    'apikey':        SB_KEY,
-    'Authorization': `Bearer ${sbSession?.access_token || SB_KEY}`,
-    'Content-Type':  'application/json',
+// ═══════════════════════════════════════════════════════
+//  SUPABASE
+// ═══════════════════════════════════════════════════════
+async function sbReq(path, opts={}) {
+  const h = {
+    apikey:        SB_KEY,
+    Authorization:`Bearer ${sbSess?.access_token||SB_KEY}`,
+    'Content-Type':'application/json',
     ...(opts.headers||{})
   };
-  const res = await fetch(SB_URL + path, { ...opts, headers });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `HTTP ${res.status}`);
-  }
-  return res.status === 204 ? null : res.json();
+  const r = await fetch(SB_URL+path, {...opts, headers:h});
+  if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||`${r.status}`); }
+  return r.status===204?null:r.json();
 }
-
-async function sbLogin(email, password) {
-  const data = await sbFetch('/auth/v1/token?grant_type=password', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
+async function sbLogin(email,pwd) {
+  const d = await sbReq('/auth/v1/token?grant_type=password',{
+    method:'POST',body:JSON.stringify({email,password:pwd})
   });
-  sbSession = data;
-  localStorage.setItem('sb_session', JSON.stringify(data));
-  return data;
+  sbSess = d;
+  localStorage.setItem('sb_sess',JSON.stringify(d));
+  return d;
 }
-
-async function sbSignup(email, password) {
-  const data = await sbFetch('/auth/v1/signup', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
+async function sbSignup(email,pwd) {
+  const d = await sbReq('/auth/v1/signup',{
+    method:'POST',body:JSON.stringify({email,password:pwd})
   });
-  if (data.access_token) {
-    sbSession = data;
-    localStorage.setItem('sb_session', JSON.stringify(data));
-  }
-  return data;
+  if (d.access_token){ sbSess=d; localStorage.setItem('sb_sess',JSON.stringify(d)); }
+  return d;
 }
-
-async function sbLogout() {
-  await sbFetch('/auth/v1/logout', { method: 'POST' }).catch(()=>{});
-  sbSession = null;
-  localStorage.removeItem('sb_session');
+async function sbRefresh(token) {
+  return sbReq('/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',body:JSON.stringify({refresh_token:token})
+  });
 }
-
+async function doLogout() {
+  await sbReq('/auth/v1/logout',{method:'POST'}).catch(()=>{});
+  sbSess=null; localStorage.removeItem('sb_sess');
+  closeMo('moAuth'); updateAuthUI(); showToast('已退出登录');
+}
 async function syncToCloud() {
-  if (!sbSession) return;
-  document.getElementById('syncStatus').textContent = '同步中…';
-  document.getElementById('syncStatus').className   = 'sync-status syncing';
+  if (!sbSess) return;
+  const pill = document.getElementById('syncPill');
+  pill.textContent='同步中…'; pill.className='sync-pill busy';
   try {
-    await sbFetch('/rest/v1/sync_data', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({
-        user_id:    sbSession.user.id,
-        app_name:   'thinknote',
-        data:       { notes },
-        updated_at: new Date().toISOString()
+    // Strip internal render fields before sync
+    const clean = notes.map(n=>({...n, _annoStatus:n._annoStatus, _resStep:n._resStep, _lastAnnoTime:n._lastAnnoTime}));
+    await sbReq('/rest/v1/sync_data',{
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({
+        user_id:  sbSess.user.id,
+        app_name:'thinknote',
+        data:     {notes:clean},
+        updated_at:new Date().toISOString()
       })
     });
-    document.getElementById('syncStatus').textContent = '已同步 ✓';
-    document.getElementById('syncStatus').className   = 'sync-status ok';
+    pill.textContent='已同步 ✓'; pill.className='sync-pill ok';
   } catch(e) {
-    document.getElementById('syncStatus').textContent = '同步失败';
-    document.getElementById('syncStatus').className   = 'sync-status';
-    console.error('sync error', e);
+    pill.textContent='同步失败'; pill.className='sync-pill';
+    console.error('sync',e);
   }
 }
-
 async function loadFromCloud() {
-  if (!sbSession) return;
+  if (!sbSess) return;
   try {
-    const data = await sbFetch(`/rest/v1/sync_data?user_id=eq.${sbSession.user.id}&app_name=eq.thinknote`);
-    if (data && data[0]?.data?.notes?.length) {
-      const cloud = data[0].data.notes;
-      // Merge: cloud wins, add any local-only notes
-      const cloudIds = new Set(cloud.map(n=>n.id));
-      const localOnly = notes.filter(n=>!cloudIds.has(n.id));
-      notes = [...cloud, ...localOnly];
-      // Save all to local DB
+    const d = await sbReq(`/rest/v1/sync_data?user_id=eq.${sbSess.user.id}&app_name=eq.thinknote`);
+    if (d?.[0]?.data?.notes?.length) {
+      const cloud   = d[0].data.notes;
+      const cloudIds= new Set(cloud.map(n=>n.id));
+      const local   = notes.filter(n=>!cloudIds.has(n.id));
+      notes = [...cloud,...local];
       for (const n of notes) await dbPut(n);
-      renderNotesList();
-      if (currentId) {
-        const cur = notes.find(n=>n.id===currentId);
-        if (cur) { renderThread(cur); }
-      }
+      renderAll();
+      if (selId) selNote(selId);
     }
-  } catch(e) { console.error('cloud load', e); }
+  } catch(e){ console.error('cloud load',e); }
 }
-
 function scheduleSyncCloud() {
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(syncToCloud, SYNC_DELAY);
+  syncTimer = setTimeout(syncToCloud, 3000);
 }
 
-// ===== AUTH MODAL =====
-let authMode = 'login';
-
-function toggleAuthMode() {
-  authMode = authMode === 'login' ? 'signup' : 'login';
-  if (authMode === 'signup') {
-    document.getElementById('authTitle').textContent        = '👤 注册账号';
-    document.getElementById('authSub').textContent          = '创建账号后即可同步笔记到云端';
-    document.getElementById('authToggleLink').textContent   = '已有账号？登录';
-    document.getElementById('authSubmitBtn').textContent    = '注册';
-  } else {
-    document.getElementById('authTitle').textContent        = '👤 登录账号';
-    document.getElementById('authSub').textContent          = '登录后笔记将自动同步到云端，多设备共享';
-    document.getElementById('authToggleLink').textContent   = '没有账号？注册';
-    document.getElementById('authSubmitBtn').textContent    = '登录';
-  }
-  document.getElementById('authError').style.display = 'none';
+// ═══════════════════════════════════════════════════════
+//  AUTH MODAL
+// ═══════════════════════════════════════════════════════
+function toggleAuth() {
+  authMode = authMode==='login'?'signup':'login';
+  document.getElementById('moAuthTitle').textContent  = authMode==='login'?'👤 登录账号':'👤 注册账号';
+  document.getElementById('moAuthSub').textContent    = authMode==='login'?'登录后笔记与批注自动云同步':'创建账号，多设备共享笔记';
+  document.getElementById('authToggle').textContent   = authMode==='login'?'没有账号？注册':'已有账号？登录';
+  document.getElementById('authSubmit').textContent   = authMode==='login'?'登录':'注册';
+  document.getElementById('authErr').style.display    = 'none';
 }
-
-async function submitAuth() {
-  const email    = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPassword').value;
-  const errEl    = document.getElementById('authError');
-
-  if (!email || !password) {
-    errEl.textContent = '请填写邮箱和密码';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  const btn = document.getElementById('authSubmitBtn');
-  btn.disabled = true;
-  btn.textContent = '请稍候…';
-  errEl.style.display = 'none';
-
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pwd   = document.getElementById('authPwd').value;
+  const errEl = document.getElementById('authErr');
+  if (!email||!pwd){ errEl.textContent='请填写邮箱和密码'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('authSubmit');
+  btn.disabled=true; btn.textContent='请稍候…'; errEl.style.display='none';
   try {
-    if (authMode === 'login') {
-      await sbLogin(email, password);
-    } else {
-      await sbSignup(email, password);
-    }
-    closeModal('authModal');
-    updateAuthBtn();
-    await loadFromCloud();
-    scheduleSyncCloud();
-    showToast(authMode === 'login' ? '登录成功' : '注册成功');
-  } catch(e) {
-    errEl.textContent   = e.message;
-    errEl.style.display = 'block';
+    if (authMode==='login') await sbLogin(email,pwd);
+    else                    await sbSignup(email,pwd);
+    closeMo('moAuth'); updateAuthUI();
+    await loadFromCloud(); scheduleSyncCloud();
+    showToast(authMode==='login'?'登录成功':'注册成功');
+  } catch(e){
+    errEl.textContent=e.message; errEl.style.display='block';
   } finally {
-    btn.disabled    = false;
-    btn.textContent = authMode === 'login' ? '登录' : '注册';
+    btn.disabled=false;
+    btn.textContent=authMode==='login'?'登录':'注册';
   }
 }
-
-async function logout() {
-  await sbLogout();
-  closeModal('authModal');
-  updateAuthBtn();
-  showToast('已退出登录');
-}
-
-function updateAuthBtn() {
+function updateAuthUI() {
   const btn = document.getElementById('authBtn');
-  if (sbSession) {
-    btn.title = '已登录: ' + sbSession.user.email;
-    btn.classList.add('active');
-    document.getElementById('syncStatus').textContent = '云同步';
-    document.getElementById('syncStatus').className   = 'sync-status ok';
-    document.getElementById('logoutDivider').style.display  = '';
-    document.getElementById('logoutSection').style.display  = '';
-    document.getElementById('authToggleLink').style.display = 'none';
+  const pill= document.getElementById('syncPill');
+  if (sbSess) {
+    btn.classList.add('on');
+    btn.title = sbSess.user.email;
+    pill.textContent='云同步'; pill.className='sync-pill ok';
+    document.getElementById('logoutSep').style.display='';
+    document.getElementById('logoutArea').style.display='';
   } else {
+    btn.classList.remove('on');
     btn.title = '登录账号';
-    btn.classList.remove('active');
-    document.getElementById('syncStatus').textContent = '本地';
-    document.getElementById('syncStatus').className   = 'sync-status';
-    document.getElementById('logoutDivider').style.display  = 'none';
-    document.getElementById('logoutSection').style.display  = 'none';
-    document.getElementById('authToggleLink').style.display = '';
+    pill.textContent='本地'; pill.className='sync-pill';
+    document.getElementById('logoutSep').style.display='none';
+    document.getElementById('logoutArea').style.display='none';
   }
 }
-
-function openAuthModal() {
-  if (sbSession) {
-    document.getElementById('authTitle').textContent = '👤 已登录';
-    document.getElementById('authSub').textContent   = sbSession.user.email;
-    document.getElementById('authEmail').style.display = 'none';
-    document.getElementById('authPassword').style.display = 'none';
-    document.querySelector('label[for="authEmail"]')?.remove?.();
-    document.querySelectorAll('.modal-label').forEach(l=>l.style.display='none');
-    document.getElementById('authSubmitBtn').style.display = 'none';
-    document.getElementById('authToggleLink').style.display = 'none';
-    document.getElementById('logoutDivider').style.display = '';
-    document.getElementById('logoutSection').style.display = '';
+document.getElementById('authBtn').addEventListener('click',()=>{
+  if (sbSess) {
+    document.getElementById('moAuthTitle').textContent='👤 已登录';
+    document.getElementById('moAuthSub').textContent=sbSess.user.email;
+    document.getElementById('authEmail').style.display='none';
+    document.getElementById('authPwd').style.display='none';
+    document.querySelectorAll('#moAuth .mo-label').forEach(l=>l.style.display='none');
+    document.getElementById('authSubmit').style.display='none';
+    document.getElementById('authToggle').style.display='none';
+    document.getElementById('logoutSep').style.display='';
+    document.getElementById('logoutArea').style.display='';
   } else {
-    document.getElementById('authEmail').style.display    = '';
-    document.getElementById('authPassword').style.display = '';
-    document.querySelectorAll('.modal-label').forEach(l=>l.style.display='');
-    document.getElementById('authSubmitBtn').style.display = '';
-    authMode = 'login';
-    document.getElementById('authTitle').textContent       = '👤 登录账号';
-    document.getElementById('authSub').textContent         = '登录后笔记将自动同步到云端，多设备共享';
-    document.getElementById('authToggleLink').textContent  = '没有账号？注册';
-    document.getElementById('authSubmitBtn').textContent   = '登录';
+    document.getElementById('authEmail').style.display='';
+    document.getElementById('authPwd').style.display='';
+    document.querySelectorAll('#moAuth .mo-label').forEach(l=>l.style.display='');
+    document.getElementById('authSubmit').style.display='';
+    document.getElementById('authToggle').style.display='';
+    document.getElementById('logoutSep').style.display='none';
+    document.getElementById('logoutArea').style.display='none';
+    authMode='login';
+    document.getElementById('moAuthTitle').textContent='👤 登录账号';
+    document.getElementById('moAuthSub').textContent='登录后笔记与批注自动云同步';
+    document.getElementById('authToggle').textContent='没有账号？注册';
+    document.getElementById('authSubmit').textContent='登录';
+    document.getElementById('authErr').style.display='none';
   }
-  openModal('authModal');
-}
+  openMo('moAuth');
+});
 
-// ===== MODAL HELPERS =====
-function openModal(id) {
-  document.getElementById(id).classList.add('visible');
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('visible');
-  document.getElementById(id).addEventListener('click', e => {
-    if (e.target === document.getElementById(id)) closeModal(id);
-  }, { once: true });
-}
+// ═══════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════════
+function openMo(id) { document.getElementById(id).classList.add('vis'); }
+function closeMo(id){ document.getElementById(id).classList.remove('vis'); }
+document.querySelectorAll('.mo').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('vis'); });
+});
 
-// ===== TOAST =====
-let toastTimer;
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let toastT;
 function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),2500);
 }
 
-// ===== MOBILE =====
-function closeMobile() {
-  document.getElementById('rightPane').classList.remove('mobile-open');
-}
+// ═══════════════════════════════════════════════════════
+//  SCROLL & RESIZE → redraw connectors
+// ═══════════════════════════════════════════════════════
+document.getElementById('docScroll') .addEventListener('scroll', schedRedraw);
+document.getElementById('annoScroll').addEventListener('scroll', schedRedraw);
+window.addEventListener('resize', schedRedraw);
 
-// ===== AUTO-RESIZE TEXTAREA =====
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, parseInt(el.style.maxHeight||'999')) + 'px';
-}
+// ═══════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════
+document.getElementById('cInput').addEventListener('keydown', e=>{
+  if (e.key==='Enter'&&(e.ctrlKey||e.metaKey)) addNote();
+});
+document.getElementById('cInput').addEventListener('input', function(){ autoResize(this); });
+document.getElementById('cSend').addEventListener('click', addNote);
 
-// ===== INIT =====
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
 async function init() {
   await initDB();
 
-  // Load local notes
   const raw = await dbAll();
-  notes = raw.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-  renderNotesList();
+  // Restore _annoStatus for notes that already have thread
+  notes = raw.map(n => ({
+    ...n,
+    _annoStatus: n.thread?.length>0 ? 'done' : 'idle',
+    _resStep:    -1,
+    _lastAnnoTime: n.thread?.filter(m=>m.role==='assistant').slice(-1)[0]?.ts || n.created_at
+  })).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
-  // Restore session
-  const savedSession = localStorage.getItem('sb_session');
-  if (savedSession) {
+  renderAll();
+  if (notes.length>0) selNote(notes[0].id);
+
+  // Restore Supabase session
+  const saved = localStorage.getItem('sb_sess');
+  if (saved) {
     try {
-      sbSession = JSON.parse(savedSession);
-      // Refresh session
-      const refreshed = await sbFetch('/auth/v1/token?grant_type=refresh_token', {
-        method: 'POST',
-        body: JSON.stringify({ refresh_token: sbSession.refresh_token })
-      }).catch(() => null);
-      if (refreshed?.access_token) {
-        sbSession = refreshed;
-        localStorage.setItem('sb_session', JSON.stringify(refreshed));
+      const s = JSON.parse(saved);
+      const r = await sbRefresh(s.refresh_token).catch(()=>null);
+      if (r?.access_token) {
+        sbSess = r;
+        localStorage.setItem('sb_sess', JSON.stringify(r));
+      } else {
+        sbSess = s;
       }
-      updateAuthBtn();
+      updateAuthUI();
       await loadFromCloud();
     } catch(e) {
-      sbSession = null;
-      localStorage.removeItem('sb_session');
+      sbSess=null; localStorage.removeItem('sb_sess');
     }
   }
-
-  // Select first note if exists
-  if (notes.length > 0) {
-    selectNote(notes[0].id);
-  }
-
-  // Event listeners
-  initFilterTabs();
-  initComposeTabs();
-
-  document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
-  document.getElementById('authBtn').addEventListener('click', openAuthModal);
-
-  document.getElementById('sendBtn').addEventListener('click', addNote);
-  document.getElementById('composeInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote();
-  });
-  document.getElementById('composeInput').addEventListener('input', function() { autoResize(this); });
-
-  document.getElementById('replyBtn').addEventListener('click', sendReply);
-  document.getElementById('replyInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendReply();
-  });
-  document.getElementById('replyInput').addEventListener('input', function() { autoResize(this); });
-
-  // Close modals on overlay click
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('visible');
-    });
-  });
 }
 
 init().catch(console.error);
