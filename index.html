@@ -189,11 +189,49 @@
     .c-send:disabled{opacity:.4;cursor:not-allowed;transform:none;}
     .c-hint{font-size:11px;color:var(--t4);margin-top:5px;}
 
-    /* ─── GUTTER ─────────────────────────────────────── */
+    /* ─── GUTTER (resizable handle) ─────────────────── */
     .gutter{
       width:28px;flex-shrink:0;
       background:var(--bg);
       z-index:1;
+      cursor:col-resize;
+      display:flex;align-items:center;justify-content:center;
+      transition:background .15s;
+    }
+    .gutter::after{
+      content:'';width:3px;height:36px;border-radius:2px;
+      background:var(--border);transition:background .15s;
+    }
+    .gutter:hover::after,.gutter.dragging::after{background:var(--accent-l);}
+    .gutter:hover{background:var(--accent-s);}
+
+    /* ─── MOBILE TAB BAR ─────────────────────────────── */
+    .mobile-tab-bar{
+      display:none;flex-shrink:0;
+      background:var(--page);border-bottom:1px solid var(--border);
+      padding:0 8px;
+    }
+    .mob-tab{
+      flex:1;padding:10px 0;
+      font-size:13.5px;font-weight:500;
+      border:none;border-bottom:2.5px solid transparent;
+      background:transparent;color:var(--t3);
+      cursor:pointer;transition:all .15s;
+    }
+    .mob-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+    @media(max-width:767px){
+      .mobile-tab-bar{display:flex;}
+      .main{display:block;}
+      .doc-pane{width:100% !important;height:100%;flex:none;}
+      .doc-pane.mob-hidden{display:none !important;}
+      .anno-pane{width:100% !important;height:100%;flex:none;border-left:none;}
+      .anno-pane.mob-hidden{display:none !important;}
+      .gutter{display:none !important;}
+      #connCanvas{display:none !important;}
+      .c-hint{display:none;}
+      .sync-pill{display:none;}
+      .hdr-sep{display:none;}
     }
 
     /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
@@ -425,6 +463,12 @@
   </div>
 </header>
 
+<!-- ─── MOBILE TAB BAR ─────────────────────────────────── -->
+<div class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mob-tab active" data-tab="notes">📝 笔记</button>
+  <button class="mob-tab" data-tab="annos">🤖 AI 批注</button>
+</div>
+
 <!-- ─── MAIN ──────────────────────────────────────────── -->
 <div class="main" id="mainContainer">
   <canvas id="connCanvas"></canvas>
@@ -542,6 +586,21 @@ let syncTimer  = null;
 let delTarget  = null;
 let authMode   = 'login';
 let rafId      = null;
+
+// ─── MOBILE TAB ─────────────────────────────────────────
+let mobileTab = 'notes';
+function isMobile(){ return window.innerWidth < 768; }
+function switchMobileTab(tab) {
+  mobileTab = tab;
+  document.querySelector('.doc-pane') .classList.toggle('mob-hidden', tab !== 'notes');
+  document.querySelector('.anno-pane').classList.toggle('mob-hidden', tab !== 'annos');
+  document.querySelectorAll('.mob-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab));
+}
+document.getElementById('mobileTabBar').addEventListener('click', e => {
+  const btn = e.target.closest('.mob-tab');
+  if (btn) switchMobileTab(btn.dataset.tab);
+});
 
 // ═══════════════════════════════════════════════════════
 //  IndexedDB
@@ -665,6 +724,7 @@ function drawConnectors() {
 }
 
 function schedRedraw() {
+  if (isMobile()) return;
   if (rafId) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(()=>{ drawConnectors(); rafId=null; });
 }
@@ -734,7 +794,7 @@ function renderNotes(list) {
     const badge    = TYPE_LABELS[n.type] || n.type;
     const hasAnno  = n.thread && n.thread.length > 0;
     const annoInfo = hasAnno ? `🤖 ${Math.ceil(n.thread.filter(m=>m.role==='assistant').length)} 条批注` : '等待 AI 批注';
-    return `<div class="note-entry${n.id===selId?' sel':''}" data-id="${n.id}" data-type="${n.type}" onclick="selNote('${n.id}')">
+    return `<div class="note-entry${n.id===selId?' sel':''}" data-id="${n.id}" data-type="${n.type}" onclick="selNote('${n.id}',true)">
       <div class="ne-top">
         <span class="ne-badge ${n.type}">${badge}</span>
         <span class="ne-time">${fmtFull(n.created_at)}</span>
@@ -777,7 +837,7 @@ function renderAnnos(list) {
       'done':        `${fmtTime(n._lastAnnoTime||n.created_at)}`
     }[n._annoStatus || 'idle'] || '';
 
-    return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}" onclick="selNote('${n.id}')">
+    return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}" onclick="selNote('${n.id}',true)">
       <div class="ac-hdr">
         <div class="ac-avatar">🤖</div>
         <div class="ac-title">AI 深度批注</div>
@@ -854,12 +914,15 @@ function buildDoneHtml(note, isStreaming) {
 // ═══════════════════════════════════════════════════════
 //  SELECT NOTE
 // ═══════════════════════════════════════════════════════
-function selNote(id) {
+function selNote(id, switchTab = false) {
   selId = id;
   document.querySelectorAll('.note-entry').forEach(el=>
     el.classList.toggle('sel', el.dataset.id===id));
   document.querySelectorAll('.anno-card').forEach(el=>
     el.classList.toggle('sel', el.dataset.id===id));
+
+  // On mobile: clicking a note/anno switches to annotation view
+  if (switchTab && isMobile()) switchMobileTab('annos');
 
   // Scroll annotation into view
   const anno = document.querySelector(`.anno-card[data-id="${id}"]`);
@@ -891,7 +954,7 @@ async function addNote() {
 
   await dbPut(note);
   renderAll();
-  selNote(note.id);
+  selNote(note.id, true);
 
   // Scroll note into view
   const noteEl = document.querySelector(`.note-entry[data-id="${note.id}"]`);
@@ -1346,6 +1409,47 @@ function showToast(msg) {
 document.getElementById('docScroll') .addEventListener('scroll', schedRedraw);
 document.getElementById('annoScroll').addEventListener('scroll', schedRedraw);
 window.addEventListener('resize', schedRedraw);
+
+// ─── RESIZABLE GUTTER (desktop / tablet) ─────────────────
+{
+  const gutterEl  = document.querySelector('.gutter');
+  const docPaneEl = document.querySelector('.doc-pane');
+  let resizing = false, startX, startW;
+
+  function startResize(clientX) {
+    resizing = true; startX = clientX; startW = docPaneEl.offsetWidth;
+    gutterEl.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+  }
+  function doResize(clientX) {
+    if (!resizing) return;
+    const maxW = document.getElementById('mainContainer').offsetWidth - 240 - 28;
+    docPaneEl.style.width = Math.max(240, Math.min(startW + clientX - startX, maxW)) + 'px';
+    schedRedraw();
+  }
+  function endResize() {
+    if (!resizing) return;
+    resizing = false;
+    gutterEl.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+
+  gutterEl.addEventListener('mousedown', e => {
+    startResize(e.clientX);
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => { if (resizing) doResize(e.clientX); });
+  document.addEventListener('mouseup', endResize);
+
+  gutterEl.addEventListener('touchstart', e => {
+    startResize(e.touches[0].clientX);
+    e.preventDefault();
+  }, { passive:false });
+  document.addEventListener('touchmove', e => { if (resizing) doResize(e.touches[0].clientX); }, { passive:true });
+  document.addEventListener('touchend', endResize);
+}
 
 // ═══════════════════════════════════════════════════════
 //  KEYBOARD SHORTCUTS
