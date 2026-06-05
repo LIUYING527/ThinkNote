@@ -220,6 +220,17 @@
     }
     .mob-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
+    /* Mobile back button in anno pane header */
+    .mob-back-btn{
+      display:none;
+      padding:3px 10px;border-radius:6px;
+      border:1px solid var(--border);background:transparent;
+      color:var(--accent);font-size:12px;cursor:pointer;
+      margin-right:8px;flex-shrink:0;
+      transition:all .15s;
+    }
+    .mob-back-btn:hover{background:var(--accent-s);}
+
     @media(max-width:767px){
       .mobile-tab-bar{display:flex;}
       .main{display:block;}
@@ -232,6 +243,8 @@
       .c-hint{display:none;}
       .sync-pill{display:none;}
       .hdr-sep{display:none;}
+      .mob-back-btn{display:inline-flex;align-items:center;}
+      .anno-pane-hdr{display:flex;align-items:center;}
     }
 
     /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
@@ -499,7 +512,10 @@
 
   <!-- RIGHT: annotations -->
   <div class="anno-pane">
-    <div class="anno-pane-hdr">🤖 AI 深度批注</div>
+    <div class="anno-pane-hdr">
+      <button class="mob-back-btn" id="mobBackBtn">← 笔记</button>
+      🤖 AI 深度批注
+    </div>
     <div class="anno-scroll" id="annoScroll"></div>
   </div>
 </div>
@@ -601,6 +617,7 @@ document.getElementById('mobileTabBar').addEventListener('click', e => {
   const btn = e.target.closest('.mob-tab');
   if (btn) switchMobileTab(btn.dataset.tab);
 });
+document.getElementById('mobBackBtn').addEventListener('click', () => switchMobileTab('notes'));
 
 // ═══════════════════════════════════════════════════════
 //  IndexedDB
@@ -1476,6 +1493,7 @@ async function init() {
   })).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
   renderAll();
+  switchMobileTab('notes');
   if (notes.length>0) selNote(notes[0].id);
 
   // Restore Supabase session
