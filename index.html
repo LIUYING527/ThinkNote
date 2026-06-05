@@ -275,6 +275,7 @@
       overflow:hidden;
       box-shadow:var(--sh-sm);
       transition:border-color .18s,box-shadow .18s;
+      cursor:pointer;
     }
     .anno-card.sel{border-color:var(--accent-l);box-shadow:0 0 0 2px rgba(99,102,241,.10),var(--sh);}
 
@@ -353,12 +354,13 @@
     }
     .ri-row{display:flex;gap:7px;align-items:flex-end;}
     .ri-textarea{
-      flex:1;min-height:36px;max-height:80px;
-      padding:7px 10px;border-radius:7px;
+      flex:1;min-height:44px;max-height:120px;
+      padding:10px 10px;border-radius:7px;
       border:1px solid var(--border);background:var(--bg);
       color:var(--t1);font-size:13px;line-height:1.55;
       resize:none;outline:none;font-family:inherit;
       transition:border-color .18s,background .18s;
+      cursor:text;
     }
     .ri-textarea:focus{border-color:var(--accent-l);background:var(--page);}
     .ri-textarea::placeholder{color:var(--t4);}
@@ -869,12 +871,14 @@ function renderAnnos(list) {
 
   // Attach reply button listeners
   document.querySelectorAll('.ri-btn').forEach(btn => {
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();  // prevent bubbling to anno-card onclick
       const id = btn.closest('.anno-card').dataset.id;
       sendReply(id);
     });
   });
   document.querySelectorAll('.ri-textarea').forEach(ta => {
+    ta.addEventListener('click', e=>e.stopPropagation());  // prevent annocard onclick → scrollIntoView stealing focus
     ta.addEventListener('keydown', e=>{
       if (e.key==='Enter'&&(e.ctrlKey||e.metaKey)) {
         const id = ta.closest('.anno-card').dataset.id;
