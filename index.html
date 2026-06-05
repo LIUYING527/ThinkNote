@@ -1137,7 +1137,6 @@ async function annotate(noteId, replyContent) {
     note._lastAnnoTime = new Date().toISOString();
 
     await dbPut(note);
-    renderAll(); selNote(noteId);
     scheduleSyncCloud();
 
   } catch(e) {
@@ -1145,10 +1144,10 @@ async function annotate(noteId, replyContent) {
     if (msgIdx >= 0) note.thread.splice(msgIdx, 1);
     showToast('AI 批注失败: ' + e.message);
     console.error(e);
-    renderAll(); selNote(noteId);
   } finally {
     streaming = false;
     document.getElementById('cSend').disabled = false;
+    renderAll(); selNote(noteId);
   }
 }
 
