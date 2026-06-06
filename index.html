@@ -288,6 +288,15 @@
     }
     .arb-btn:disabled{opacity:.35;cursor:not-allowed;}
     .arb-btn:not(:disabled):active{background:#4338ca;}
+    .arb-stop-row{display:none;}
+    .arb-stop-btn{
+      width:100%;padding:11px 0;border-radius:10px;
+      border:1.5px solid #ef4444;background:transparent;
+      color:#ef4444;font-size:14px;font-weight:500;
+      cursor:pointer;transition:all .15s;
+    }
+    .arb-stop-btn:active{background:#fef2f2;}
+    .ac-continue-btn{color:var(--accent);border-color:var(--accent-l);background:var(--accent-s);}
 
     /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
     .anno-pane{
@@ -602,7 +611,12 @@
     <!-- Mobile bottom reply bar -->
     <div class="anno-reply-bar" id="annoReplyBar">
       <div class="arb-ctx" id="arbCtx">请先选择一条笔记</div>
-      <div class="arb-row">
+      <!-- Shown during streaming -->
+      <div class="arb-stop-row" id="arbStopRow" style="display:none">
+        <button class="arb-stop-btn" id="arbStop">⏹ 停止生成</button>
+      </div>
+      <!-- Shown when ready to reply -->
+      <div class="arb-row" id="arbInputRow">
         <textarea class="arb-ta" id="arbInput" placeholder="继续追问 AI…" rows="1" disabled></textarea>
         <button class="arb-btn" id="arbSend" disabled>↑</button>
       </div>
@@ -687,6 +701,7 @@ let selId      = null;
 let filterType = 'all';
 let cType      = 'thought';
 let streaming  = false;
+let abortCtrl  = null;   // AbortController for current AI call
 let sbSess     = null;
 let syncTimer  = null;
 let delTarget  = null;
@@ -755,7 +770,15 @@ function uid() {
     (c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
 }
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function delay(ms, signal) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(res, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(t);
+      rej(new DOMException('Aborted', 'AbortError'));
+    }, { once: true });
+  });
+}
 function fmtTime(iso) {
   const d=new Date(iso), now=new Date(), diff=now-d;
   if(diff<60000)    return '刚刚';
@@ -978,6 +1001,8 @@ function renderAnnos(list) {
     }[n._annoStatus || 'idle'] || '';
 
     const isDone = n._annoStatus === 'done';
+    const aiText = n.thread?.find(m=>m.role==='assistant')?.content || '';
+    const looksShort = isDone && aiText.length > 0 && aiText.length < 200;
     return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}">
       <div class="ac-hdr" onclick="selNote('${n.id}',true)">
         <div class="ac-avatar">🤖</div>
@@ -987,6 +1012,7 @@ function renderAnnos(list) {
           <span>${esc(statusLabel)}</span>
         </div>
         ${isDone && !streamingThis ? `
+          ${looksShort ? `<button class="ac-action-btn ac-continue-btn" onclick="continueAnnotate('${n.id}',event)" title="继续生成">▶ 继续</button>` : ''}
           <button class="ac-action-btn" onclick="copyAnno('${n.id}',event)" title="复制批注">📋</button>
           <button class="ac-action-btn" onclick="reAnnotate('${n.id}',event)" title="重新批注">♻️</button>
         ` : ''}
@@ -1120,7 +1146,7 @@ async function addNote() {
 // ═══════════════════════════════════════════════════════
 //  ANNOTATE (initial AI annotation with research delay)
 // ═══════════════════════════════════════════════════════
-async function annotate(noteId, replyContent) {
+async function annotate(noteId, replyContent, continueMode=false) {
   const note = notes.find(n=>n.id===noteId);
   if (!note || streaming) return;
 
@@ -1131,11 +1157,14 @@ async function annotate(noteId, replyContent) {
     return;
   }
 
-  streaming = true;
+  streaming   = true;
+  abortCtrl   = new AbortController();
+  const signal = abortCtrl.signal;
   document.getElementById('cSend').disabled = true;
+  updateReplyBar();
 
   // If this is a reply, add user message first
-  if (replyContent) {
+  if (replyContent && !continueMode) {
     note.thread.push({ role:'user', content:replyContent, ts:new Date().toISOString() });
     await dbPut(note);
   }
@@ -1146,21 +1175,20 @@ async function annotate(noteId, replyContent) {
     note._resStep    = 0;
     renderAll();
     selNote(noteId);
-    await delay(1200);
+    await delay(1200, signal);
 
     note._resStep = 1;
     updateResearchStep(noteId, 1);
-    await delay(1200);
+    await delay(1200, signal);
 
     note._annoStatus = 'thinking';
     note._resStep    = 2;
     updateResearchStep(noteId, 2);
-    await delay(1000);
+    await delay(1000, signal);
   } else {
-    // For replies, just show brief thinking
     note._annoStatus = 'thinking';
     renderAll(); selNote(noteId);
-    await delay(800);
+    await delay(500, signal);
   }
 
   // ── Build messages ──
@@ -1168,18 +1196,12 @@ async function annotate(noteId, replyContent) {
   const typeLabel = TYPE_LABELS[note.type] || '笔记';
 
   if (note.thread.length === 0 || (note.thread.length === 1 && note.thread[0].role==='user' && replyContent)) {
-    // Initial annotation
     messages.push({
       role:'user',
       content:`[类型：${typeLabel}]\n\n${note.content}\n\n请对以上内容进行深度批注。`
     });
   } else {
-    // Build from existing thread
-    const firstUserMsg = {
-      role:'user',
-      content:`[类型：${typeLabel}]\n\n${note.content}\n\n请对以上内容进行深度批注。`
-    };
-    messages.push(firstUserMsg);
+    messages.push({ role:'user', content:`[类型：${typeLabel}]\n\n${note.content}\n\n请对以上内容进行深度批注。` });
     note.thread.forEach(m => {
       messages.push({ role:m.role==='assistant'?'assistant':'user', content:m.content });
     });
@@ -1195,6 +1217,7 @@ async function annotate(noteId, replyContent) {
   try {
     const resp = await fetch(DS_API, {
       method:'POST',
+      signal,
       headers:{
         'Content-Type':'application/json',
         'Authorization':`Bearer ${apiKey}`
@@ -1216,12 +1239,11 @@ async function annotate(noteId, replyContent) {
     // Add AI message placeholder
     const aiMsg = { role:'assistant', content:'', ts:new Date().toISOString() };
     if (!replyContent) {
-      note.thread = [aiMsg];  // first annotation replaces empty thread
+      note.thread = [aiMsg];
     } else {
       note.thread.push(aiMsg);
     }
     msgIdx = note.thread.length - 1;
-
     renderAll(); selNote(noteId);
 
     const reader  = resp.body.getReader();
@@ -1243,7 +1265,6 @@ async function annotate(noteId, replyContent) {
           if (chunk) {
             fullContent += chunk;
             note.thread[msgIdx].content = fullContent;
-            // Live update text element
             const textEl  = document.getElementById(`actext_${noteId}`);
             const lastThr = document.querySelector(`.anno-card[data-id="${noteId}"] .reply-thread .thread-text:last-child`);
             if (!replyContent && textEl) {
@@ -1253,10 +1274,8 @@ async function annotate(noteId, replyContent) {
               lastThr.innerHTML = mdToHtml(fullContent);
               lastThr.classList.add('streaming-cur');
             } else {
-              // Fallback: full re-render
               renderAll(); selNote(noteId);
             }
-            // Scroll annotation
             const ac = document.querySelector(`.anno-card[data-id="${noteId}"]`);
             if (ac) ac.querySelector('.ac-body, .reply-thread')?.scrollIntoView?.({ block:'nearest' });
           }
@@ -1271,17 +1290,33 @@ async function annotate(noteId, replyContent) {
     }
     note._annoStatus   = 'done';
     note._lastAnnoTime = new Date().toISOString();
-
     await dbPut(note);
     scheduleSyncCloud();
 
   } catch(e) {
-    note._annoStatus = 'done';
-    if (msgIdx >= 0) note.thread.splice(msgIdx, 1);
-    showToast('AI 批注失败: ' + e.message);
-    console.error(e);
+    if (e.name === 'AbortError') {
+      // User manually stopped — keep whatever was generated so far
+      if (msgIdx >= 0 && fullContent) {
+        note.thread[msgIdx].content = fullContent;
+        note.thread[msgIdx].ts      = new Date().toISOString();
+        note._annoStatus = 'done';
+        await dbPut(note);
+        showToast('已停止，已保留已生成内容');
+      } else {
+        if (msgIdx >= 0) note.thread.splice(msgIdx, 1);
+        note._annoStatus = note.thread.length > 0 ? 'done' : 'idle';
+        showToast('已停止生成');
+      }
+    } else {
+      note._annoStatus = note.thread.length > 0 ? 'done' : 'idle';
+      if (msgIdx >= 0 && !fullContent) note.thread.splice(msgIdx, 1);
+      showToast('批注失败: ' + e.message);
+      console.error(e);
+    }
+    await dbPut(note).catch(()=>{});
   } finally {
-    streaming = false;
+    streaming  = false;
+    abortCtrl  = null;
     document.getElementById('cSend').disabled = false;
     renderAll();
     selNote(noteId);
@@ -1326,38 +1361,51 @@ function sendReply(noteId) {
 //  MOBILE BOTTOM REPLY BAR
 // ═══════════════════════════════════════════════════════
 function updateReplyBar() {
-  const ta  = document.getElementById('arbInput');
-  const btn = document.getElementById('arbSend');
-  const ctx = document.getElementById('arbCtx');
+  const ta       = document.getElementById('arbInput');
+  const btn      = document.getElementById('arbSend');
+  const ctx      = document.getElementById('arbCtx');
+  const stopRow  = document.getElementById('arbStopRow');
+  const inputRow = document.getElementById('arbInputRow');
   if (!ta) return;
 
   const note     = notes.find(n => n.id === selId);
   const canReply = note && note._annoStatus === 'done' && !streaming;
 
+  // During streaming: show stop button, hide input
+  if (streaming) {
+    if (stopRow)  stopRow.style.display  = '';
+    if (inputRow) inputRow.style.display = 'none';
+    if (ctx) ctx.innerHTML = 'AI 批注生成中…';
+    return;
+  }
+
+  // Otherwise: show input, hide stop button
+  if (stopRow)  stopRow.style.display  = 'none';
+  if (inputRow) inputRow.style.display = '';
+
   ta.disabled  = !canReply;
   btn.disabled = !canReply;
 
   if (!note) {
-    ctx.innerHTML = '← 从左侧选择一条笔记';
+    ctx.innerHTML  = '← 从左侧选择一条笔记';
     ta.placeholder = '请先选择笔记';
   } else if (note._annoStatus === 'idle') {
-    ctx.innerHTML = '<strong>等待 AI 批注生成…</strong>';
+    ctx.innerHTML  = '等待 AI 批注生成…';
     ta.placeholder = '批注生成后可追问';
-  } else if (note._annoStatus !== 'done' || streaming) {
-    ctx.innerHTML = '<strong>AI 批注中，请稍候…</strong>';
+  } else if (note._annoStatus !== 'done') {
+    ctx.innerHTML  = 'AI 思考中，请稍候…';
     ta.placeholder = '批注完成后可追问';
   } else {
-    const preview = note.content.length > 40
-      ? note.content.slice(0, 40) + '…'
-      : note.content;
-    ctx.innerHTML = '回复：<strong>' + esc(preview) + '</strong>';
+    const preview = note.content.length > 40 ? note.content.slice(0,40)+'…' : note.content;
+    ctx.innerHTML  = '回复：<strong>' + esc(preview) + '</strong>';
     ta.placeholder = '继续追问 AI，Ctrl+Enter 发送';
   }
 }
 
 {
-  const ta  = document.getElementById('arbInput');
-  const btn = document.getElementById('arbSend');
+  const ta      = document.getElementById('arbInput');
+  const btn     = document.getElementById('arbSend');
+  const stopBtn = document.getElementById('arbStop');
 
   function doSendReply() {
     const content = ta.value.trim();
@@ -1376,6 +1424,23 @@ function updateReplyBar() {
     }
   });
   ta.addEventListener('input', function() { autoResize(this); });
+
+  // Stop button — abort current fetch/delays
+  stopBtn?.addEventListener('click', () => {
+    if (abortCtrl) {
+      abortCtrl.abort();
+    } else {
+      // Fallback: force-reset state if somehow stuck
+      streaming = false;
+      document.getElementById('cSend').disabled = false;
+      const note = notes.find(n=>n.id===selId);
+      if (note && note._annoStatus !== 'done' && note._annoStatus !== 'idle') {
+        note._annoStatus = note.thread?.length > 0 ? 'done' : 'idle';
+      }
+      renderAll(); selNote(selId); updateReplyBar();
+      showToast('已重置状态');
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1393,6 +1458,16 @@ async function reAnnotate(noteId, e) {
   selNote(noteId, true);
   updateReplyBar();
   await annotate(noteId, null);
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONTINUE ANNOTATION (继续生成)
+// ═══════════════════════════════════════════════════════
+async function continueAnnotate(noteId, e) {
+  if (e) e.stopPropagation();
+  const note = notes.find(n=>n.id===noteId);
+  if (!note || streaming) return;
+  await annotate(noteId, '请继续完成你之前的批注，从中断的位置接续输出，不要重复已有内容。', true);
 }
 
 // ═══════════════════════════════════════════════════════
