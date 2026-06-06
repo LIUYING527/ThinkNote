@@ -437,6 +437,41 @@
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:transparent;}
     ::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:2px;}
+
+    /* ─── ANNO CARD: header is the clickable zone ───── */
+    .anno-card{cursor:default;}
+    .ac-hdr{cursor:pointer;user-select:none;-webkit-user-select:none;}
+    .ac-hdr:hover{background:var(--border);transition:background .15s;}
+
+    /* ─── ANNO ACTION BUTTONS ────────────────────────── */
+    .ac-action-btn{
+      padding:3px 7px;border-radius:6px;
+      border:1px solid transparent;background:transparent;
+      color:var(--t4);font-size:12px;cursor:pointer;
+      transition:all .15s;flex-shrink:0;line-height:1;
+    }
+    .ac-action-btn:hover{background:var(--bg);border-color:var(--border);color:var(--t2);}
+
+    /* ─── MARKDOWN RENDERING ─────────────────────────── */
+    .ac-text,.thread-text{line-height:1.85;}
+    .md-h1{font-size:15px;font-weight:700;color:var(--t1);margin:10px 0 4px;}
+    .md-h2{font-size:14px;font-weight:700;color:var(--t1);margin:8px 0 3px;}
+    .md-h3{font-size:13.5px;font-weight:600;color:var(--t2);margin:6px 0 2px;border-bottom:1px solid var(--border);padding-bottom:2px;}
+    .md-gap{height:7px;}
+    .md-ul{padding-left:18px;margin:3px 0;}
+    .md-ul li{margin:4px 0;font-size:13.5px;color:var(--t2);line-height:1.65;}
+    .md-oli{padding-left:2px;margin:4px 0;font-size:13.5px;color:var(--t2);line-height:1.65;}
+    .ac-text code,.thread-text code{
+      background:#f3f4f6;padding:1px 5px;border-radius:4px;
+      font-size:12px;font-family:'Menlo','Consolas',monospace;color:var(--accent);
+    }
+    .ac-text strong,.thread-text strong{font-weight:600;color:var(--t1);}
+    .ac-text em,.thread-text em{font-style:italic;}
+
+    /* ─── COMPOSE CHAR COUNT ─────────────────────────── */
+    .c-hint-row{display:flex;align-items:center;justify-content:space-between;margin-top:5px;}
+    .c-count{font-size:11px;color:var(--t4);transition:color .15s;}
+    .c-count.warn{color:var(--idea);}
   </style>
 </head>
 <body>
@@ -505,7 +540,10 @@
           placeholder="写下你的想法、任务、灵感或计划…"></textarea>
         <button class="c-send" id="cSend">记录 ↵</button>
       </div>
-      <div class="c-hint">Ctrl + Enter 快速记录</div>
+      <div class="c-hint-row">
+        <span class="c-hint">Ctrl + Enter 快速记录</span>
+        <span class="c-count" id="cCount"></span>
+      </div>
     </div>
   </div>
 
@@ -685,6 +723,38 @@ function autoResize(el) {
   el.style.height=Math.min(el.scrollHeight,200)+'px';
 }
 
+// ─── MARKDOWN RENDERER ──────────────────────────────────
+function mdToHtml(raw) {
+  if (!raw) return '';
+  function inlineFmt(t) {
+    return t
+      .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>');
+  }
+  const lines = raw.split('\n');
+  let out = '', inUL = false;
+  for (const ln of lines) {
+    const e = esc(ln);
+    const h3 = e.match(/^###\s+(.+)/), h2 = e.match(/^##\s+(.+)/), h1 = e.match(/^#\s+(.+)/);
+    if (h1||h2||h3) {
+      if (inUL){out+='</ul>';inUL=false;}
+      const lv=h3?3:h2?2:1; const m=h3||h2||h1;
+      out+=`<div class="md-h${lv}">${inlineFmt(m[1])}</div>`; continue;
+    }
+    const li = e.match(/^[-*•]\s+(.+)/);
+    const oli = e.match(/^(\d+)\.\s+(.+)/);
+    if (li) { if(!inUL){out+='<ul class="md-ul">';inUL=true;} out+=`<li>${inlineFmt(li[1])}</li>`; continue; }
+    if (oli){ if(inUL){out+='</ul>';inUL=false;} out+=`<div class="md-oli">${oli[1]}. ${inlineFmt(oli[2])}</div>`; continue; }
+    if (inUL){out+='</ul>';inUL=false;}
+    if (!e.trim()){ out+='<div class="md-gap"></div>'; continue; }
+    out+=`<div>${inlineFmt(e)}</div>`;
+  }
+  if (inUL) out+='</ul>';
+  return out;
+}
+
 // ═══════════════════════════════════════════════════════
 //  CANVAS CONNECTOR LINES
 // ═══════════════════════════════════════════════════════
@@ -856,14 +926,19 @@ function renderAnnos(list) {
       'done':        `${fmtTime(n._lastAnnoTime||n.created_at)}`
     }[n._annoStatus || 'idle'] || '';
 
-    return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}" onclick="selNote('${n.id}',true)">
-      <div class="ac-hdr">
+    const isDone = n._annoStatus === 'done';
+    return `<div class="anno-card${isActive?' sel':''}" data-id="${n.id}">
+      <div class="ac-hdr" onclick="selNote('${n.id}',true)">
         <div class="ac-avatar">🤖</div>
         <div class="ac-title">AI 深度批注</div>
         <div class="ac-status">
           ${streamingThis ? '<div class="ra-spinner"></div>' : ''}
           <span>${esc(statusLabel)}</span>
         </div>
+        ${isDone && !streamingThis ? `
+          <button class="ac-action-btn" onclick="copyAnno('${n.id}',event)" title="复制批注">📋</button>
+          <button class="ac-action-btn" onclick="reAnnotate('${n.id}',event)" title="重新批注">♻️</button>
+        ` : ''}
       </div>
       ${bodyHtml}
     </div>`;
@@ -912,15 +987,19 @@ function buildDoneHtml(note, isStreaming) {
   const thread  = note.thread || [];
   const firstAI = thread.find(m=>m.role==='assistant');
   const rest    = firstAI ? thread.slice(thread.indexOf(firstAI)+1) : [];
+  const lastMsg = thread[thread.length-1];
+  const isLastAI = lastMsg?.role === 'assistant';
 
-  let mainText = firstAI ? firstAI.content : '';
+  const mainText    = firstAI ? firstAI.content : '';
+  const mainStream  = isStreaming && isLastAI && rest.length === 0;
+
   const html = `<div class="ac-body">
-    <div class="ac-text${isStreaming&&thread[thread.length-1]?.role==='assistant'?' streaming-cur':''}" id="actext_${note.id}">${esc(mainText)}</div>
+    <div class="ac-text${mainStream?' streaming-cur':''}" id="actext_${note.id}">${mdToHtml(mainText)}</div>
   </div>
   ${rest.length>0 ? `<div class="reply-thread">${
     rest.map(m=>`<div class="thread-row">
       <div class="thread-ava ${m.role==='assistant'?'ai':'usr'}">${m.role==='assistant'?'🤖':'👤'}</div>
-      <div class="thread-text${isStreaming&&m===thread[thread.length-1]&&m.role==='assistant'?' streaming-cur':''}">${esc(m.content)}</div>
+      <div class="thread-text${isStreaming&&m===lastMsg&&isLastAI?' streaming-cur':''}">${m.role==='assistant'?mdToHtml(m.content):esc(m.content)}</div>
     </div>`).join('')
   }</div>` : ''}
   <div class="reply-input-wrap">
@@ -942,12 +1021,14 @@ function selNote(id, switchTab = false) {
   document.querySelectorAll('.anno-card').forEach(el=>
     el.classList.toggle('sel', el.dataset.id===id));
 
-  // On mobile: clicking a note/anno switches to annotation view
+  // On mobile: clicking a note switches to annotation view
   if (switchTab && isMobile()) switchMobileTab('annos');
 
-  // Scroll annotation into view
-  const anno = document.querySelector(`.anno-card[data-id="${id}"]`);
-  if (anno) anno.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  // Use rAF so the pane is visible before scrolling (especially after tab switch)
+  requestAnimationFrame(() => {
+    const anno = document.querySelector(`.anno-card[data-id="${id}"]`);
+    if (anno) anno.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  });
 
   schedRedraw();
 }
@@ -1111,15 +1192,14 @@ async function annotate(noteId, replyContent) {
             fullContent += chunk;
             note.thread[msgIdx].content = fullContent;
             // Live update text element
-            const id      = replyContent ? `thread_${noteId}_${msgIdx}` : `actext_${noteId}`;
             const textEl  = document.getElementById(`actext_${noteId}`);
-            const lastMsg = document.querySelector(`.anno-card[data-id="${noteId}"] .reply-thread .thread-text:last-child`);
+            const lastThr = document.querySelector(`.anno-card[data-id="${noteId}"] .reply-thread .thread-text:last-child`);
             if (!replyContent && textEl) {
-              textEl.textContent = fullContent;
+              textEl.innerHTML = mdToHtml(fullContent);
               textEl.classList.add('streaming-cur');
-            } else if (replyContent && lastMsg) {
-              lastMsg.textContent = fullContent;
-              lastMsg.classList.add('streaming-cur');
+            } else if (replyContent && lastThr) {
+              lastThr.innerHTML = mdToHtml(fullContent);
+              lastThr.classList.add('streaming-cur');
             } else {
               // Fallback: full re-render
               renderAll(); selNote(noteId);
@@ -1186,6 +1266,37 @@ function sendReply(noteId) {
   ta.value = '';
   ta.style.height = 'auto';
   annotate(noteId, content);
+}
+
+// ═══════════════════════════════════════════════════════
+//  RE-ANNOTATE
+// ═══════════════════════════════════════════════════════
+async function reAnnotate(noteId, e) {
+  if (e) e.stopPropagation();
+  const note = notes.find(n=>n.id===noteId);
+  if (!note || streaming) return;
+  note.thread      = [];
+  note._annoStatus = 'idle';
+  note._resStep    = -1;
+  await dbPut(note);
+  renderAll();
+  selNote(noteId, true);
+  await annotate(noteId, null);
+}
+
+// ═══════════════════════════════════════════════════════
+//  COPY ANNOTATION
+// ═══════════════════════════════════════════════════════
+async function copyAnno(noteId, e) {
+  if (e) e.stopPropagation();
+  const note = notes.find(n=>n.id===noteId);
+  if (!note) return;
+  const text = note.thread?.find(m=>m.role==='assistant')?.content || '';
+  if (!text) { showToast('暂无批注内容'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('批注已复制');
+  } catch(_) { showToast('复制失败，请手动选择文字'); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1471,13 +1582,39 @@ window.addEventListener('resize', schedRedraw);
   document.addEventListener('touchend', endResize);
 }
 
+// ─── MOBILE SWIPE LEFT/RIGHT TO SWITCH TABS ─────────────
+{
+  let sx = 0, sy = 0;
+  const mc = document.getElementById('mainContainer');
+  mc.addEventListener('touchstart', e=>{
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive:true });
+  mc.addEventListener('touchend', e=>{
+    if (!isMobile()) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 55) {
+      if (dx < 0 && mobileTab==='notes') switchMobileTab('annos');
+      if (dx > 0 && mobileTab==='annos') switchMobileTab('notes');
+    }
+  }, { passive:true });
+}
+
 // ═══════════════════════════════════════════════════════
 //  KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════════════════════
 document.getElementById('cInput').addEventListener('keydown', e=>{
   if (e.key==='Enter'&&(e.ctrlKey||e.metaKey)) addNote();
 });
-document.getElementById('cInput').addEventListener('input', function(){ autoResize(this); });
+document.getElementById('cInput').addEventListener('input', function(){
+  autoResize(this);
+  const len = this.value.length;
+  const el  = document.getElementById('cCount');
+  if (!el) return;
+  el.textContent = len > 0 ? len + ' 字' : '';
+  el.classList.toggle('warn', len > 400);
+});
 document.getElementById('cSend').addEventListener('click', addNote);
 
 // ═══════════════════════════════════════════════════════
