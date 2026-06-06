@@ -298,6 +298,25 @@
     .arb-stop-btn:active{background:#fef2f2;}
     .ac-continue-btn{color:var(--accent);border-color:var(--accent-l);background:var(--accent-s);}
 
+    /* ─── START / RETRY buttons inside idle/stuck anno-card ── */
+    .ac-start-btn{
+      display:block;width:100%;padding:10px 0;
+      border-radius:9px;border:1.5px solid var(--accent-l);
+      background:var(--accent-s);color:var(--accent);
+      font-size:13.5px;font-weight:500;cursor:pointer;
+      transition:all .15s;
+    }
+    .ac-start-btn:hover{background:var(--accent);color:#fff;}
+    /* Reply bar start row */
+    .arb-start-row{display:none;}
+    .arb-start-btn{
+      width:100%;padding:12px 0;border-radius:10px;
+      border:1.5px solid var(--accent-l);background:var(--accent-s);
+      color:var(--accent);font-size:14px;font-weight:500;
+      cursor:pointer;transition:all .15s;
+    }
+    .arb-start-btn:active{background:var(--accent);color:#fff;}
+
     /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
     .anno-pane{
       flex:1;min-width:240px;
@@ -614,6 +633,10 @@
       <!-- Shown during streaming -->
       <div class="arb-stop-row" id="arbStopRow" style="display:none">
         <button class="arb-stop-btn" id="arbStop">⏹ 停止生成</button>
+      </div>
+      <!-- Shown for idle notes (no annotation yet) -->
+      <div class="arb-start-row" id="arbStartRow" style="display:none">
+        <button class="arb-start-btn" id="arbStart">🚀 开始 AI 批注</button>
       </div>
       <!-- Shown when ready to reply -->
       <div class="arb-row" id="arbInputRow">
@@ -982,9 +1005,19 @@ function renderAnnos(list) {
     // Check streaming state
     const streamingThis = streaming && n.id === selId;
 
+    // Detect stuck state: status says in-progress but nothing is actually streaming
+    const isStuck = !streamingThis && !streaming &&
+      (n._annoStatus === 'researching' || n._annoStatus === 'thinking' || n._annoStatus === 'streaming');
+
     if (!n._annoStatus || n._annoStatus === 'idle') {
       bodyHtml = `<div class="ac-body">
-        <div class="ac-text" style="color:var(--t4);font-size:12.5px;font-style:italic;">等待记录后 AI 自动开始批注…</div>
+        <div class="ac-text" style="color:var(--t4);font-size:12.5px;font-style:italic;margin-bottom:12px;">批注尚未生成</div>
+        <button class="ac-start-btn" onclick="annotate('${n.id}',null);event.stopPropagation()">🚀 立即批注</button>
+      </div>`;
+    } else if (isStuck) {
+      bodyHtml = `<div class="ac-body">
+        <div class="ac-text" style="color:var(--t4);font-size:12.5px;font-style:italic;margin-bottom:12px;">批注似乎卡住了</div>
+        <button class="ac-start-btn" onclick="forceRetry('${n.id}');event.stopPropagation()">🔄 重新批注</button>
       </div>`;
     } else if (n._annoStatus === 'researching' || n._annoStatus === 'thinking') {
       bodyHtml = buildResearchHtml(n);
@@ -1361,44 +1394,60 @@ function sendReply(noteId) {
 //  MOBILE BOTTOM REPLY BAR
 // ═══════════════════════════════════════════════════════
 function updateReplyBar() {
-  const ta       = document.getElementById('arbInput');
-  const btn      = document.getElementById('arbSend');
-  const ctx      = document.getElementById('arbCtx');
-  const stopRow  = document.getElementById('arbStopRow');
-  const inputRow = document.getElementById('arbInputRow');
+  const ta        = document.getElementById('arbInput');
+  const btn       = document.getElementById('arbSend');
+  const ctx       = document.getElementById('arbCtx');
+  const stopRow   = document.getElementById('arbStopRow');
+  const startRow  = document.getElementById('arbStartRow');
+  const inputRow  = document.getElementById('arbInputRow');
   if (!ta) return;
 
   const note     = notes.find(n => n.id === selId);
   const canReply = note && note._annoStatus === 'done' && !streaming;
+  const isIdle   = note && (note._annoStatus === 'idle' || !note._annoStatus);
+  const isStuck  = note && !streaming &&
+    ['researching','thinking','streaming'].includes(note._annoStatus);
 
-  // During streaming: show stop button, hide input
+  // Helper: show only one row
+  function showRow(which) {
+    if (stopRow)  stopRow.style.display  = which==='stop'  ? '' : 'none';
+    if (startRow) startRow.style.display = which==='start' ? '' : 'none';
+    if (inputRow) inputRow.style.display = which==='input' ? '' : 'none';
+  }
+
   if (streaming) {
-    if (stopRow)  stopRow.style.display  = '';
-    if (inputRow) inputRow.style.display = 'none';
+    showRow('stop');
     if (ctx) ctx.innerHTML = 'AI 批注生成中…';
     return;
   }
 
-  // Otherwise: show input, hide stop button
-  if (stopRow)  stopRow.style.display  = 'none';
-  if (inputRow) inputRow.style.display = '';
-
-  ta.disabled  = !canReply;
-  btn.disabled = !canReply;
-
   if (!note) {
+    showRow('input');
+    ta.disabled = btn.disabled = true;
     ctx.innerHTML  = '← 从左侧选择一条笔记';
     ta.placeholder = '请先选择笔记';
-  } else if (note._annoStatus === 'idle') {
-    ctx.innerHTML  = '等待 AI 批注生成…';
-    ta.placeholder = '批注生成后可追问';
-  } else if (note._annoStatus !== 'done') {
-    ctx.innerHTML  = 'AI 思考中，请稍候…';
-    ta.placeholder = '批注完成后可追问';
-  } else {
+    return;
+  }
+
+  if (isIdle || isStuck) {
+    showRow('start');
+    const startBtn = document.getElementById('arbStart');
+    if (startBtn) startBtn.textContent = isStuck ? '🔄 重新批注' : '🚀 开始 AI 批注';
+    ctx.innerHTML = isStuck ? '批注似乎卡住了' : '该笔记还没有 AI 批注';
+    return;
+  }
+
+  if (canReply) {
+    showRow('input');
+    ta.disabled = btn.disabled = false;
     const preview = note.content.length > 40 ? note.content.slice(0,40)+'…' : note.content;
     ctx.innerHTML  = '回复：<strong>' + esc(preview) + '</strong>';
     ta.placeholder = '继续追问 AI，Ctrl+Enter 发送';
+  } else {
+    showRow('input');
+    ta.disabled = btn.disabled = true;
+    ctx.innerHTML  = 'AI 思考中，请稍候…';
+    ta.placeholder = '批注完成后可追问';
   }
 }
 
@@ -1425,6 +1474,19 @@ function updateReplyBar() {
   });
   ta.addEventListener('input', function() { autoResize(this); });
 
+  // Start annotation button (for idle / stuck notes)
+  document.getElementById('arbStart')?.addEventListener('click', () => {
+    if (!selId || streaming) return;
+    const note = notes.find(n=>n.id===selId);
+    if (!note) return;
+    if (note._annoStatus === 'idle' || !note._annoStatus) {
+      annotate(selId, null);
+    } else {
+      forceRetry(selId);
+    }
+    updateReplyBar();
+  });
+
   // Stop button — abort current fetch/delays
   stopBtn?.addEventListener('click', () => {
     if (abortCtrl) {
@@ -1446,6 +1508,21 @@ function updateReplyBar() {
 // ═══════════════════════════════════════════════════════
 //  RE-ANNOTATE
 // ═══════════════════════════════════════════════════════
+// Force-reset a stuck note and retry annotation
+async function forceRetry(noteId) {
+  if (streaming) { if (abortCtrl) abortCtrl.abort(); streaming = false; abortCtrl = null; }
+  const note = notes.find(n=>n.id===noteId);
+  if (!note) return;
+  note.thread      = [];
+  note._annoStatus = 'idle';
+  note._resStep    = -1;
+  await dbPut(note);
+  renderAll();
+  selNote(noteId, true);
+  updateReplyBar();
+  await annotate(noteId, null);
+}
+
 async function reAnnotate(noteId, e) {
   if (e) e.stopPropagation();
   const note = notes.find(n=>n.id===noteId);
