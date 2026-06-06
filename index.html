@@ -245,7 +245,49 @@
       .hdr-sep{display:none;}
       .mob-back-btn{display:inline-flex;align-items:center;}
       .anno-pane-hdr{display:flex;align-items:center;}
+      /* Hide in-card reply on mobile — use the bottom bar instead */
+      .reply-input-wrap{display:none !important;}
+      /* Show the bottom reply bar on mobile */
+      .anno-reply-bar{display:flex !important;}
     }
+
+    /* ─── BOTTOM REPLY BAR (mobile) ─────────────────── */
+    .anno-reply-bar{
+      display:none;          /* hidden on desktop */
+      flex-direction:column;
+      flex-shrink:0;
+      background:var(--page);
+      border-top:2px solid var(--border);
+      padding:10px 12px 12px;
+      gap:6px;
+    }
+    .arb-ctx{
+      font-size:11.5px;color:var(--t3);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .arb-ctx strong{color:var(--t2);font-weight:600;}
+    .arb-row{display:flex;gap:8px;align-items:flex-end;}
+    .arb-ta{
+      flex:1;min-height:44px;max-height:110px;
+      padding:11px 13px;border-radius:10px;
+      border:1.5px solid var(--border);background:var(--bg);
+      color:var(--t1);font-size:14px;line-height:1.5;
+      resize:none;outline:none;font-family:inherit;
+      -webkit-appearance:none;appearance:none;
+      transition:border-color .18s,background .18s;
+    }
+    .arb-ta:focus{border-color:var(--accent-l);background:var(--page);}
+    .arb-ta::placeholder{color:var(--t4);}
+    .arb-ta:disabled{opacity:.5;cursor:not-allowed;}
+    .arb-btn{
+      width:44px;height:44px;border-radius:10px;border:none;
+      background:var(--accent);color:#fff;
+      font-size:20px;line-height:1;
+      cursor:pointer;transition:background .15s;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .arb-btn:disabled{opacity:.35;cursor:not-allowed;}
+    .arb-btn:not(:disabled):active{background:#4338ca;}
 
     /* ─── RIGHT: ANNOTATION PANE ─────────────────────── */
     .anno-pane{
@@ -557,6 +599,14 @@
       🤖 AI 深度批注
     </div>
     <div class="anno-scroll" id="annoScroll"></div>
+    <!-- Mobile bottom reply bar -->
+    <div class="anno-reply-bar" id="annoReplyBar">
+      <div class="arb-ctx" id="arbCtx">请先选择一条笔记</div>
+      <div class="arb-row">
+        <textarea class="arb-ta" id="arbInput" placeholder="继续追问 AI…" rows="1" disabled></textarea>
+        <button class="arb-btn" id="arbSend" disabled>↑</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -861,6 +911,7 @@ function renderAll() {
   const list = visible(sorted());
   renderNotes(list);
   renderAnnos(list);
+  updateReplyBar();
   setTimeout(schedRedraw, 100);
 }
 
@@ -1030,6 +1081,7 @@ function selNote(id, switchTab = false) {
     if (anno) anno.scrollIntoView({ behavior:'smooth', block:'nearest' });
   });
 
+  updateReplyBar();
   schedRedraw();
 }
 
@@ -1231,7 +1283,9 @@ async function annotate(noteId, replyContent) {
   } finally {
     streaming = false;
     document.getElementById('cSend').disabled = false;
-    renderAll(); selNote(noteId);
+    renderAll();
+    selNote(noteId);
+    updateReplyBar();
   }
 }
 
@@ -1269,6 +1323,62 @@ function sendReply(noteId) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  MOBILE BOTTOM REPLY BAR
+// ═══════════════════════════════════════════════════════
+function updateReplyBar() {
+  const ta  = document.getElementById('arbInput');
+  const btn = document.getElementById('arbSend');
+  const ctx = document.getElementById('arbCtx');
+  if (!ta) return;
+
+  const note     = notes.find(n => n.id === selId);
+  const canReply = note && note._annoStatus === 'done' && !streaming;
+
+  ta.disabled  = !canReply;
+  btn.disabled = !canReply;
+
+  if (!note) {
+    ctx.innerHTML = '← 从左侧选择一条笔记';
+    ta.placeholder = '请先选择笔记';
+  } else if (note._annoStatus === 'idle') {
+    ctx.innerHTML = '<strong>等待 AI 批注生成…</strong>';
+    ta.placeholder = '批注生成后可追问';
+  } else if (note._annoStatus !== 'done' || streaming) {
+    ctx.innerHTML = '<strong>AI 批注中，请稍候…</strong>';
+    ta.placeholder = '批注完成后可追问';
+  } else {
+    const preview = note.content.length > 40
+      ? note.content.slice(0, 40) + '…'
+      : note.content;
+    ctx.innerHTML = '回复：<strong>' + esc(preview) + '</strong>';
+    ta.placeholder = '继续追问 AI，Ctrl+Enter 发送';
+  }
+}
+
+{
+  const ta  = document.getElementById('arbInput');
+  const btn = document.getElementById('arbSend');
+
+  function doSendReply() {
+    const content = ta.value.trim();
+    if (!content || !selId || streaming) return;
+    ta.value = '';
+    ta.style.height = 'auto';
+    annotate(selId, content);
+    updateReplyBar();
+  }
+
+  btn.addEventListener('click', doSendReply);
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      doSendReply();
+    }
+  });
+  ta.addEventListener('input', function() { autoResize(this); });
+}
+
+// ═══════════════════════════════════════════════════════
 //  RE-ANNOTATE
 // ═══════════════════════════════════════════════════════
 async function reAnnotate(noteId, e) {
@@ -1281,6 +1391,7 @@ async function reAnnotate(noteId, e) {
   await dbPut(note);
   renderAll();
   selNote(noteId, true);
+  updateReplyBar();
   await annotate(noteId, null);
 }
 
@@ -1635,6 +1746,7 @@ async function init() {
   renderAll();
   switchMobileTab('notes');
   if (notes.length>0) selNote(notes[0].id);
+  updateReplyBar();
 
   // Restore Supabase session
   const saved = localStorage.getItem('sb_sess');
