@@ -135,7 +135,7 @@
       display:flex;align-items:center;gap:3px;
     }
     .ne-del{
-      margin-left:auto;padding:2px 6px;border-radius:6px;
+      padding:2px 6px;border-radius:6px;
       border:none;background:transparent;color:var(--t4);
       cursor:pointer;font-size:12px;opacity:0;transition:all .15s;
     }
@@ -249,6 +249,10 @@
       .reply-input-wrap{display:none !important;}
       /* Show the bottom reply bar on mobile */
       .anno-reply-bar{display:flex !important;}
+      /* Always show action buttons on touch devices (no hover) */
+      .ne-del,.ne-edit{opacity:.7;}
+      /* Ensure anno-pane constrains its flex children properly */
+      .anno-pane{overflow:hidden;}
     }
 
     /* ─── BOTTOM REPLY BAR (mobile) ─────────────────── */
@@ -542,6 +546,29 @@
     .c-hint-row{display:flex;align-items:center;justify-content:space-between;margin-top:5px;}
     .c-count{font-size:11px;color:var(--t4);transition:color .15s;}
     .c-count.warn{color:var(--idea);}
+
+    /* ─── SCROLL AREAS: allow native vertical scroll on touch ── */
+    .anno-scroll,.doc-scroll{touch-action:pan-y;}
+
+    /* ─── NOTE EDIT BUTTON ──────────────────────────────── */
+    .ne-edit{
+      margin-left:auto;
+      padding:2px 6px;border-radius:6px;
+      border:none;background:transparent;color:var(--t4);
+      cursor:pointer;font-size:12px;opacity:0;transition:all .15s;
+    }
+    .note-entry:hover .ne-edit{opacity:1;}
+    .ne-edit:hover{background:#eff6ff;color:var(--plan);}
+
+    /* ─── INLINE EDIT FORM ───────────────────────────────── */
+    .edit-ta{
+      display:block;width:100%;min-height:72px;max-height:200px;
+      padding:9px 11px;border-radius:8px;
+      border:1.5px solid var(--accent-l);background:var(--page);
+      color:var(--t1);font-size:14px;line-height:1.6;
+      resize:vertical;outline:none;font-family:inherit;margin-bottom:10px;
+    }
+    .edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
   </style>
 </head>
 <body>
@@ -730,6 +757,8 @@ let syncTimer  = null;
 let delTarget  = null;
 let authMode   = 'login';
 let rafId      = null;
+let editingId   = null;  // note currently being edited inline
+let editingType = null;  // type selected during edit
 
 // ─── MOBILE TAB ─────────────────────────────────────────
 let mobileTab = 'notes';
@@ -977,6 +1006,24 @@ function renderNotes(list) {
     return;
   }
   el.innerHTML = list.map(n => {
+    // ── Inline edit mode ──
+    if (n.id === editingId) {
+      const et = editingType || n.type;
+      return `<div class="note-entry${n.id===selId?' sel':''}" data-id="${n.id}" data-type="${et}" onclick="event.stopPropagation()">
+        <div class="c-types" style="margin-bottom:8px;">
+          ${['thought','task','idea','plan'].map(t=>`<button class="c-type${et===t?' active':''}" data-type="${t}" onclick="setEditType('${t}');event.stopPropagation()">${TYPE_LABELS[t]}</button>`).join('')}
+        </div>
+        <textarea class="edit-ta" id="editTa_${n.id}"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Escape'){cancelEdit(event);}else if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){saveEdit(event,'${n.id}');}"
+        >${esc(n.content)}</textarea>
+        <div class="edit-actions">
+          <button class="btn-cancel" onclick="cancelEdit(event)">取消</button>
+          <button class="btn-ok" onclick="saveEdit(event,'${n.id}')">保存修改</button>
+        </div>
+      </div>`;
+    }
+    // ── Normal read mode ──
     const badge    = TYPE_LABELS[n.type] || n.type;
     const hasAnno  = n.thread && n.thread.length > 0;
     const annoInfo = hasAnno ? `🤖 ${Math.ceil(n.thread.filter(m=>m.role==='assistant').length)} 条批注` : '等待 AI 批注';
@@ -988,6 +1035,7 @@ function renderNotes(list) {
       <div class="ne-content">${esc(n.content)}</div>
       <div class="ne-foot">
         <span class="ne-anno-pill">${hasAnno ? '🤖' : '⏳'} ${annoInfo}</span>
+        <button class="ne-edit" onclick="startEdit(event,'${n.id}')" title="编辑">✏️</button>
         <button class="ne-del" onclick="askDel(event,'${n.id}')" title="删除">🗑</button>
       </div>
     </div>`;
@@ -1119,6 +1167,60 @@ function buildDoneHtml(note, isStreaming) {
     </div>
   </div>`;
   return html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOTE EDITING
+// ═══════════════════════════════════════════════════════
+function startEdit(e, id) {
+  e.stopPropagation();
+  if (streaming) { showToast('批注进行中，请稍后再编辑'); return; }
+  const note = notes.find(n=>n.id===id);
+  if (!note) return;
+  editingId   = id;
+  editingType = note.type;
+  renderNotes(visible(sorted()));
+  setTimeout(()=>{
+    const ta = document.getElementById(`editTa_${id}`);
+    if (!ta) return;
+    autoResize(ta);
+    ta.addEventListener('input', ()=>autoResize(ta));
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = ta.value.length;
+  }, 50);
+}
+
+function setEditType(type) {
+  editingType = type;
+  const noteEl = document.querySelector(`.note-entry[data-id="${editingId}"]`);
+  if (!noteEl) return;
+  noteEl.dataset.type = type;
+  noteEl.querySelectorAll('.c-type').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type));
+}
+
+async function saveEdit(e, id) {
+  e.stopPropagation();
+  const ta = document.getElementById(`editTa_${id}`);
+  const content = ta?.value?.trim();
+  if (!content) { showToast('内容不能为空'); return; }
+  const note = notes.find(n=>n.id===id);
+  if (!note) return;
+  note.content = content;
+  note.type    = editingType || note.type;
+  editingId    = null;
+  editingType  = null;
+  await dbPut(note);
+  renderAll();
+  scheduleSyncCloud();
+  showToast('笔记已更新');
+}
+
+function cancelEdit(e) {
+  e.stopPropagation();
+  editingId   = null;
+  editingType = null;
+  renderNotes(visible(sorted()));
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1847,14 +1949,16 @@ window.addEventListener('resize', schedRedraw);
 
 // ─── MOBILE SWIPE LEFT/RIGHT TO SWITCH TABS ─────────────
 {
-  let sx = 0, sy = 0;
+  let sx = 0, sy = 0, swipeAllowed = true;
   const mc = document.getElementById('mainContainer');
   mc.addEventListener('touchstart', e=>{
+    // Disable swipe when touch starts inside scrollable areas or interactive elements
+    swipeAllowed = !e.target.closest('#annoScroll, #docScroll, textarea, input, button');
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
   }, { passive:true });
   mc.addEventListener('touchend', e=>{
-    if (!isMobile()) return;
+    if (!isMobile() || !swipeAllowed) return;
     const dx = e.changedTouches[0].clientX - sx;
     const dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 55) {
